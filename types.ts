@@ -1,4 +1,3 @@
-
 export type Language = 'de' | 'en';
 
 export interface MenuItem {
@@ -12,21 +11,30 @@ export interface MenuItem {
   isFeatured?: boolean;
 }
 
-export type OrderStatus = 'new' | 'processing' | 'on_the_way' | 'delivered';
+export type OrderStatus = 'processing' | 'completed';
+
+export interface OrderItem {
+  menuItemId: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
 
 export interface Order {
   id: string;
   orderNumber: string;
-  time: string;
-  date: string; // YYYY-MM-DD
   customerName: string;
   phone: string;
   address: string;
   zipCode: string;
   city: string;
-  type: 'delivery';
+  deliveryNote?: string;
   paymentMethod: 'online' | 'cash';
   status: OrderStatus;
-  items: { menuItemId: string; quantity: number; price: number }[];
+  items: OrderItem[];
+  subtotal: number;
+  deliveryFee: number;
   total: number;
+  stripeSessionId?: string;
+  createdAt: string;
 }

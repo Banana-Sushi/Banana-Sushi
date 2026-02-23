@@ -1,4 +1,3 @@
-
 export const translations = {
   de: {
     nav: {
@@ -50,7 +49,8 @@ export const translations = {
       cash: 'Barzahlung bei Lieferung',
       placeOrder: 'Kostenpflichtig bestellen',
       success: 'Vielen Dank!',
-      successSub: 'Deine Bestellung wurde empfangen. Wir senden dir eine E-Mail, sobald deine Lieferung unterwegs oder bereit ist.',
+      successSub: 'Deine Bestellung wurde empfangen und wird gerade bearbeitet. Eine Bestätigungs-E-Mail wurde an dich gesendet.',
+      successSpam: 'Falls du keine E-Mail erhalten hast, überprüfe bitte deinen Spam-Ordner.',
       backHome: 'Zurück zur Startseite',
       empty: 'Dein Warenkorb ist leer.',
       browseMenu: 'Hier geht\'s zur Speisekarte',
@@ -69,15 +69,14 @@ export const translations = {
       email: 'E-Mail',
       password: 'Passwort',
       loginBtn: 'Anmelden',
+      logout: 'Abmelden',
       orders: 'Live',
       history: 'Historie',
       stats: 'Statistik',
       activeOrders: 'Aktive Bestellungen',
       menuMgmt: 'Speisekarte',
-      new: 'Neu',
-      processing: 'In Arbeit',
-      on_the_way: 'Unterwegs',
-      delivered: 'Geliefert',
+      processing: 'In Bearbeitung',
+      completed: 'Abgeschlossen',
       status: 'Status',
       orderNo: 'Bestellnr.',
       items: 'Artikel',
@@ -86,7 +85,7 @@ export const translations = {
       addNewItem: 'Neues Gericht',
       back: 'Zurück',
       details: 'Details',
-      print: 'Drucken',
+      print: 'Bon drucken',
       changeStatus: 'Status ändern',
       customer: 'Kunde',
       deliveryAddress: 'Lieferadresse',
@@ -94,7 +93,8 @@ export const translations = {
       revenueToday: 'Umsatz Heute',
       revenueMonth: 'Umsatz Monat',
       totalOrders: 'Bestellungen',
-      year: 'Jahr'
+      markComplete: 'Als abgeschlossen markieren',
+      newOrder: 'Neue Bestellung!'
     }
   },
   en: {
@@ -147,7 +147,8 @@ export const translations = {
       cash: 'Cash on Delivery',
       placeOrder: 'Place Order',
       success: 'Thank You!',
-      successSub: 'Your order is confirmed. We will send you an email as soon as your delivery is on the way or ready.',
+      successSub: 'Your order has been received and is now being processed. A confirmation email has been sent to you.',
+      successSpam: "Didn't receive the email? Please check your spam folder.",
       backHome: 'Back to Home',
       empty: 'Your cart is currently empty.',
       browseMenu: 'Browse our menu here',
@@ -166,15 +167,14 @@ export const translations = {
       email: 'Email',
       password: 'Password',
       loginBtn: 'Sign In',
+      logout: 'Sign Out',
       orders: 'Live',
       history: 'History',
       stats: 'Stats',
       activeOrders: 'Active Orders',
       menuMgmt: 'Menu',
-      new: 'New',
       processing: 'Processing',
-      on_the_way: 'On the way',
-      delivered: 'Delivered',
+      completed: 'Completed',
       status: 'Status',
       orderNo: 'Order #',
       items: 'Items',
@@ -188,10 +188,11 @@ export const translations = {
       customer: 'Customer',
       deliveryAddress: 'Delivery Address',
       paymentStatus: 'Payment',
-      revenueToday: 'Today\'s Revenue',
+      revenueToday: "Today's Revenue",
       revenueMonth: 'Monthly Revenue',
       totalOrders: 'Total Orders',
-      year: 'Year'
+      markComplete: 'Mark as Completed',
+      newOrder: 'New Order!'
     }
   }
 };
