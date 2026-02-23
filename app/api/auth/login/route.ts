@@ -11,11 +11,18 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServerSupabaseClient();
-  const { data: user, error } = await supabase
-    .from('staff_users')
-    .select('*')
-    .eq('email', email.toLowerCase().trim())
-    .single();
+  const normalizedEmail = email.toLowerCase().trim();
+
+const { data, error } = await supabase
+  .from('staff_users')
+  .select('*')
+  .eq('email', normalizedEmail);
+
+console.log('[login] normalized email:', normalizedEmail);
+console.log('[login] raw data:', data);
+console.log('[login] raw error:', error);
+
+const user = data?.[0] ?? null;
 
   console.log('[login] email:', email.toLowerCase().trim());
   console.log('[login] supabase error:', error?.message ?? null);
