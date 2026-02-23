@@ -17,11 +17,16 @@ export async function POST(req: NextRequest) {
     .eq('email', email.toLowerCase().trim())
     .single();
 
+  console.log('[login] email:', email.toLowerCase().trim());
+  console.log('[login] supabase error:', error?.message ?? null);
+  console.log('[login] user found:', !!user);
+
   if (error || !user) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
   const valid = await bcrypt.compare(password, user.password_hash);
+  console.log('[login] password valid:', valid);
   if (!valid) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
