@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 import { Order } from '@/types';
 
 const transporter = nodemailer.createTransport({
@@ -10,6 +12,11 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendOrderConfirmationEmail(order: Order, customerEmail: string) {
+  const logoPath = path.join(process.cwd(), 'public', 'logo.png');
+  const logoSrc = fs.existsSync(logoPath)
+    ? `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`
+    : null;
+
   const itemsHtml = order.items
     .map(item => `<tr>
       <td style="padding:8px 0;font-weight:bold;">${item.quantity}x ${item.name}</td>
@@ -24,7 +31,10 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     <body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
       <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
         <div style="background:#ffffff;padding:32px 40px;text-align:center;border-bottom:3px solid #fbbf24;">
-          <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />
+          ${logoSrc
+            ? `<img src="${logoSrc}" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`
+            : `<h1 style="color:#000;font-size:28px;font-weight:900;letter-spacing:-1px;margin:0;">BANANA SUSHI<span style="color:#fbbf24;">.</span></h1>`
+          }
         </div>
         <div style="padding:40px;">
           <h2 style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;margin-bottom:8px;">
