@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '@/components/Icons';
-import { supabase } from '@/lib/supabase';
 
 interface RawMenuItem {
   id: string;
@@ -67,12 +66,12 @@ export default function MenuManagementPage() {
     if (!file) return;
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop();
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from('menu-images').upload(path, file, { upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from('menu-images').getPublicUrl(path);
-      setForm(prev => ({ ...prev, image: data.publicUrl }));
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/menu/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setForm(prev => ({ ...prev, image: data.url }));
     } catch (err: any) {
       addToast(err.message || 'Upload failed', 'error');
     } finally {
