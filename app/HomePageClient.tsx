@@ -206,10 +206,10 @@ export const HomePageClient = ({ featuredItems }: { featuredItems: MenuItem[] })
           </div>
         </div>
       </section>
-    </div>
 
-    {selectedItem && (
-      <MenuItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
-    )}
+      {selectedItem && (
+        <MenuItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      )}
+    </div>
   );
 };
