@@ -50,7 +50,7 @@ export const HomePageClient = ({ featuredItems }: { featuredItems: MenuItem[] })
   }, [pathname]);
 
   return (
-    <div className="animate-fade-in pt-[60px] md:pt-[80px]">
+    <div className="animate-fade-in pt-[56px] md:pt-[68px]">
       {/* Hero */}
       <section id="hero" className="relative h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
