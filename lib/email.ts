@@ -23,8 +23,8 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     <head><meta charset="utf-8"></head>
     <body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
       <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <div style="background:#000;padding:32px 40px;text-align:center;">
-          <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="Banana Sushi" style="height:48px;width:auto;display:block;margin:0 auto;" />
+        <div style="background:#ffffff;padding:32px 40px;text-align:center;border-bottom:3px solid #fbbf24;">
+          <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />
         </div>
         <div style="padding:40px;">
           <h2 style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;margin-bottom:8px;">
