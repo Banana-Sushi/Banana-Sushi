@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { Order } from '@/types';
@@ -48,6 +48,8 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<'all' | 'processing' | 'completed'>('all');
   const [loading, setLoading] = useState(true);
+  const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
+  const newOrderTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const fetchOrders = useCallback(async () => {
     const res = await fetch('/api/orders');
@@ -68,6 +70,12 @@ export default function OrdersPage() {
         const newOrder = mapOrder(payload.new);
         setOrders(prev => [newOrder, ...prev]);
         playNotificationBeep();
+        setNewOrderIds(prev => new Set([...prev, newOrder.id]));
+        const timer = setTimeout(() => {
+          setNewOrderIds(prev => { const next = new Set(prev); next.delete(newOrder.id); return next; });
+          newOrderTimers.current.delete(newOrder.id);
+        }, 2500);
+        newOrderTimers.current.set(newOrder.id, timer);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
         const updated = mapOrder(payload.new);
@@ -127,18 +135,33 @@ export default function OrdersPage() {
           <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {filtered.map(order => (
             <Link
               key={order.id}
               href={`/dashboard/orders/${order.id}`}
-              className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all relative overflow-hidden group"
+              className={`bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all relative overflow-hidden group ${newOrderIds.has(order.id) ? 'animate-new-order' : ''}`}
             >
               <div className={`absolute top-0 left-0 w-1.5 h-full ${order.status === 'completed' ? 'bg-green-500' : 'bg-yellow-400'}`} />
-              <p className="text-[9px] font-black text-gray-300 uppercase mb-1">
-                {order.orderNumber} · {new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-              <h3 className="text-xl font-black uppercase mb-6 truncate">{order.customerName}</h3>
+              <div className="flex justify-between items-start mb-3">
+                <p className="text-[9px] font-black text-gray-300 uppercase">
+                  {order.orderNumber} · {new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                {newOrderIds.has(order.id) && (
+                  <span className="text-[8px] font-black uppercase tracking-widest bg-yellow-400 text-black px-2 py-1 rounded-lg animate-fade-in">NEW</span>
+                )}
+              </div>
+              <h3 className="text-xl font-black uppercase mb-3 truncate">{order.customerName}</h3>
+              <ul className="mb-5 space-y-0.5">
+                {order.items.slice(0, 3).map((item: any, i: number) => (
+                  <li key={i} className="text-[11px] font-bold text-gray-400 uppercase truncate">
+                    {item.quantity}× {item.name}
+                  </li>
+                ))}
+                {order.items.length > 3 && (
+                  <li className="text-[10px] font-black text-gray-300 uppercase">+{order.items.length - 3} more</li>
+                )}
+              </ul>
               <div className="flex justify-between items-center">
                 <span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase ${order.status === 'completed' ? 'bg-green-50 text-green-500' : 'bg-yellow-50 text-yellow-600'}`}>
                   {order.status === 'completed' ? t.dashboard.completed : t.dashboard.processing}

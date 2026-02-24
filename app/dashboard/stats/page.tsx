@@ -35,11 +35,13 @@ export default function StatsPage() {
   }, []);
 
   const stats = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const getLocalDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const todayStr = getLocalDateStr(new Date());
     const monthStr = todayStr.substring(0, 7);
 
-    const todayOrders = orders.filter(o => o.createdAt.startsWith(todayStr));
-    const monthOrders = orders.filter(o => o.createdAt.startsWith(monthStr));
+    const todayOrders = orders.filter(o => getLocalDateStr(new Date(o.createdAt)) === todayStr);
+    const monthOrders = orders.filter(o => getLocalDateStr(new Date(o.createdAt)).startsWith(monthStr));
 
     return {
       revenueToday: todayOrders.reduce((acc, o) => acc + o.total, 0),
@@ -72,21 +74,6 @@ export default function StatsPage() {
               <p className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest">{t.dashboard.revenueMonth}</p>
               <p className="text-5xl font-black tracking-tighter text-yellow-400">{stats.revenueMonth.toFixed(2)}€</p>
               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-3">{stats.ordersMonth} orders this month</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm text-center">
-              <p className="text-[10px] font-black text-gray-300 uppercase mb-3 tracking-widest">{t.dashboard.totalOrders}</p>
-              <p className="text-3xl font-black">{stats.ordersTotal}</p>
-            </div>
-            <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm text-center">
-              <p className="text-[10px] font-black text-gray-300 uppercase mb-3 tracking-widest">{t.dashboard.processing}</p>
-              <p className="text-3xl font-black text-yellow-500">{orders.filter(o => o.status === 'processing').length}</p>
-            </div>
-            <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm text-center">
-              <p className="text-[10px] font-black text-gray-300 uppercase mb-3 tracking-widest">{t.dashboard.completed}</p>
-              <p className="text-3xl font-black text-green-500">{orders.filter(o => o.status === 'completed').length}</p>
             </div>
           </div>
         </>

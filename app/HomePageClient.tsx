@@ -2,15 +2,39 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { MenuCard } from '@/components/MenuCard';
+import { MenuItemModal } from '@/components/MenuItemModal';
 import { MenuItem } from '@/types';
 
 export const HomePageClient = ({ featuredItems }: { featuredItems: MenuItem[] }) => {
-  const { t } = useAppContext();
+  const { t, addToast } = useAppContext();
   const pathname = usePathname();
+  const [contact, setContact] = useState({ name: '', email: '', message: '' });
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactSent, setContactSent] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactLoading(true);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+      });
+      if (!res.ok) throw new Error('Failed to send message');
+      setContactSent(true);
+      setContact({ name: '', email: '', message: '' });
+    } catch {
+      addToast('Failed to send message. Please try again.', 'error');
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -59,7 +83,7 @@ export const HomePageClient = ({ featuredItems }: { featuredItems: MenuItem[] })
             <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em]">{t.menu.subtitle}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
-            {featuredItems.map(item => <MenuCard key={item.id} item={item} />)}
+            {featuredItems.map(item => <MenuCard key={item.id} item={item} onOpenDetail={setSelectedItem} />)}
           </div>
           <div className="mt-16 text-center">
             <Link href="/menu" className="inline-block bg-black text-white px-10 md:px-14 py-4 md:py-6 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-yellow-500 hover:text-black transition-all shadow-xl">
@@ -71,11 +95,25 @@ export const HomePageClient = ({ featuredItems }: { featuredItems: MenuItem[] })
 
       {/* About */}
       <section id="about" className="py-24 px-4 md:px-20 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase mb-10">{t.nav.about}</h2>
-          <p className="text-lg md:text-2xl text-gray-400 font-bold leading-relaxed italic uppercase tracking-tight">
-            &ldquo;Qualität, die man schmeckt. Leidenschaft, die man sieht. Sushi, das man liebt. BANANA Sushi steht für kreative Fusionen und absolute Frische.&rdquo;
-          </p>
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <div className="relative h-80 md:h-[480px] rounded-[3rem] overflow-hidden">
+            <Image
+              src="https://images.unsplash.com/photo-1617196034183-421b4040ed20?auto=format&fit=crop&q=80&w=1200"
+              alt="Sushi chef"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em] mb-6">{t.nav.about}</p>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase mb-8 leading-none">
+              Passion<br />on a plate<span className="text-yellow-500">.</span>
+            </h2>
+            <p className="text-lg text-gray-400 font-bold leading-relaxed italic uppercase tracking-tight">
+              {t.home.aboutQuote}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -122,18 +160,56 @@ export const HomePageClient = ({ featuredItems }: { featuredItems: MenuItem[] })
             </div>
           </div>
           <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-sm border border-gray-100">
-            <form className="space-y-4" onSubmit={e => e.preventDefault()}>
-              <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em] mb-6">Send us a message</p>
-              <input required placeholder="Name" className="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-xs" />
-              <input required type="email" placeholder="Email" className="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-xs" />
-              <textarea required placeholder="Message" rows={4} className="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-xs resize-none" />
-              <button type="submit" className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-yellow-500 hover:text-black transition-all">
-                Send Message
-              </button>
-            </form>
+            {contactSent ? (
+              <div className="text-center py-8 space-y-4">
+                <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em]">Message Sent!</p>
+                <p className="font-bold text-sm text-gray-400">We&apos;ll get back to you soon.</p>
+                <button onClick={() => setContactSent(false)} className="text-[10px] font-black uppercase tracking-widest border-b-2 border-black pb-0.5 hover:text-yellow-500 hover:border-yellow-500 transition-all">
+                  Send another
+                </button>
+              </div>
+            ) : (
+              <form className="space-y-4" onSubmit={handleContactSubmit}>
+                <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em] mb-6">Send us a message</p>
+                <input
+                  required
+                  placeholder="Name"
+                  value={contact.name}
+                  onChange={e => setContact({ ...contact, name: e.target.value })}
+                  className="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-xs"
+                />
+                <input
+                  required
+                  type="email"
+                  placeholder="Email"
+                  value={contact.email}
+                  onChange={e => setContact({ ...contact, email: e.target.value })}
+                  className="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-xs"
+                />
+                <textarea
+                  required
+                  placeholder="Message"
+                  rows={4}
+                  value={contact.message}
+                  onChange={e => setContact({ ...contact, message: e.target.value })}
+                  className="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-xs resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={contactLoading}
+                  className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-yellow-500 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {contactLoading ? '...' : 'Send Message'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </section>
     </div>
+
+    {selectedItem && (
+      <MenuItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+    )}
   );
 };

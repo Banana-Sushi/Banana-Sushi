@@ -37,10 +37,12 @@ export default function HistoryPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const getLocalDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const todayStr = getLocalDateStr(new Date());
     const monthStr = todayStr.substring(0, 7);
-    if (filter === 'today') return orders.filter(o => o.createdAt.startsWith(todayStr));
-    if (filter === 'month') return orders.filter(o => o.createdAt.startsWith(monthStr));
+    if (filter === 'today') return orders.filter(o => getLocalDateStr(new Date(o.createdAt)) === todayStr);
+    if (filter === 'month') return orders.filter(o => getLocalDateStr(new Date(o.createdAt)).startsWith(monthStr));
     return orders;
   }, [orders, filter]);
 

@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '@/components/Icons';
+import { supabase } from '@/lib/supabase';
 
 interface RawMenuItem {
   id: string;
@@ -20,7 +21,7 @@ interface RawMenuItem {
 
 const EMPTY_FORM: Omit<RawMenuItem, 'id'> = {
   name_de: '', name_en: '', description_de: '', description_en: '',
-  price: 0, category: 'Sushi', image: '', is_available: true, is_featured: false,
+  price: '' as any, category: 'Sushi', image: '', is_available: true, is_featured: false,
 };
 
 const CATEGORIES = ['Sushi', 'Bowls', 'Drinks', 'Starters', 'Desserts'];
@@ -33,6 +34,8 @@ export default function MenuManagementPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<RawMenuItem, 'id'>>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMenu = async () => {
     const res = await fetch('/api/menu');
@@ -59,25 +62,48 @@ export default function MenuManagementPage() {
     setShowModal(true);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('menu-images').upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from('menu-images').getPublicUrl(path);
+      setForm(prev => ({ ...prev, image: data.publicUrl }));
+    } catch (err: any) {
+      addToast(err.message || 'Upload failed', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const url = editingId ? `/api/menu/${editingId}` : '/api/menu';
-    const method = editingId ? 'PUT' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
-      addToast(editingId ? 'Item updated' : 'Item added', 'success');
-      setShowModal(false);
-      fetchMenu();
-    } else {
-      const data = await res.json();
-      addToast(data.error || 'Failed to save', 'error');
+    try {
+      const url = editingId ? `/api/menu/${editingId}` : '/api/menu';
+      const method = editingId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        addToast(editingId ? 'Item updated' : 'Item added', 'success');
+        setShowModal(false);
+        fetchMenu();
+      } else {
+        const data = await res.json();
+        addToast(data.error || 'Failed to save', 'error');
+      }
+    } catch {
+      addToast('Network error. Please try again.', 'error');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -179,8 +205,8 @@ export default function MenuManagementPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Price (€)</label>
-                  <input required type="number" step="0.01" min="0" value={form.price}
-                    onChange={e => setForm({ ...form, price: parseFloat(e.target.value) })}
+                  <input required type="number" step="0.01" min="0" placeholder="0.00" value={form.price}
+                    onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
                     className="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm" />
                 </div>
                 <div>
@@ -191,12 +217,34 @@ export default function MenuManagementPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Image upload */}
               <div>
-                <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Image URL</label>
-                <input value={form.image} onChange={e => setForm({ ...form, image: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm" />
+                <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Image</label>
+                <div className="mt-1 space-y-2">
+                  {form.image && (
+                    <div className="relative w-full h-32 rounded-2xl overflow-hidden">
+                      <Image src={form.image} alt="Preview" fill className="object-cover" sizes="400px" />
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 font-black text-[10px] uppercase tracking-widest text-gray-400 hover:border-black hover:text-black transition-all disabled:opacity-50"
+                  >
+                    {uploading ? 'Uploading...' : form.image ? 'Replace Image' : 'Upload Image'}
+                  </button>
+                </div>
               </div>
+
               <div className="flex gap-6 pt-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.is_available} onChange={e => setForm({ ...form, is_available: e.target.checked })} className="accent-black w-4 h-4" />
@@ -204,10 +252,10 @@ export default function MenuManagementPage() {
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.is_featured} onChange={e => setForm({ ...form, is_featured: e.target.checked })} className="accent-black w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase">Featured</span>
+                  <span className="text-[10px] font-black uppercase">Featured on Homepage</span>
                 </label>
               </div>
-              <button type="submit" disabled={saving}
+              <button type="submit" disabled={saving || uploading}
                 className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-yellow-500 hover:text-black transition-all mt-4 disabled:opacity-50">
                 {saving ? '...' : editingId ? 'Save Changes' : 'Add Item'}
               </button>

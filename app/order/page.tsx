@@ -14,7 +14,7 @@ export default function OrderPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online');
-  const [form, setForm] = useState({ name: '', phone: '', address: '', zip: '', city: '', note: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', zip: '', city: '', note: '' });
 
   const subtotal = cart.reduce((acc, c) => acc + c.item.price * c.quantity, 0);
   const total = subtotal + DELIVERY_FEE;
@@ -26,6 +26,7 @@ export default function OrderPage() {
 
     const orderData = {
       customerName: form.name,
+      email: form.email,
       phone: form.phone,
       address: form.address,
       zipCode: form.zip,
@@ -131,6 +132,14 @@ export default function OrderPage() {
             placeholder={t.checkout.name}
             value={form.name}
             onChange={e => setForm({ ...form, name: e.target.value })}
+            className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
+          />
+          <input
+            required
+            type="email"
+            placeholder={t.checkout.email}
+            value={form.email}
+            onChange={e => setForm({ ...form, email: e.target.value })}
             className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
           />
           <input

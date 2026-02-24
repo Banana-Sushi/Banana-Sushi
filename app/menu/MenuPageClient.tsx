@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { MenuCard } from '@/components/MenuCard';
+import { MenuItemModal } from '@/components/MenuItemModal';
 import { Icons } from '@/components/Icons';
 import { MenuItem } from '@/types';
 
 export const MenuPageClient = ({ items }: { items: MenuItem[] }) => {
   const { t } = useAppContext();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   const categories = ['All', ...Array.from(new Set(items.map(m => m.category)))];
   const filtered = activeCategory === 'All' ? items : items.filter(m => m.category === activeCategory);
@@ -36,10 +38,16 @@ export const MenuPageClient = ({ items }: { items: MenuItem[] }) => {
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 max-w-[1600px] mx-auto">
-        {filtered.map(item => <MenuCard key={item.id} item={item} />)}
+        {filtered.map(item => (
+          <MenuCard key={item.id} item={item} onOpenDetail={setSelectedItem} />
+        ))}
       </div>
       {filtered.length === 0 && (
         <p className="text-center text-gray-300 font-black uppercase tracking-widest py-20">No items available</p>
+      )}
+
+      {selectedItem && (
+        <MenuItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
       )}
     </div>
   );

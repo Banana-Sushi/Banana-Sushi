@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { HomePageClient } from './HomePageClient';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { MenuItem } from '@/types';
