@@ -218,7 +218,7 @@ export default function MenuManagementPage() {
                 </div>
               </div>
 
-              {/* Image upload */}
+              {/* Image upload + URL */}
               <div>
                 <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Image</label>
                 <div className="mt-1 space-y-2">
@@ -227,6 +227,18 @@ export default function MenuManagementPage() {
                       <Image src={form.image} alt="Preview" fill className="object-cover" sizes="400px" />
                     </div>
                   )}
+                  {/* URL input */}
+                  <input
+                    value={form.image}
+                    onChange={e => setForm({ ...form, image: e.target.value })}
+                    placeholder="Paste image URL (https://...)"
+                    className="w-full p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm"
+                  />
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-gray-100" />
+                    <span className="text-[9px] font-black uppercase text-gray-300 tracking-widest">or upload</span>
+                    <div className="flex-1 h-px bg-gray-100" />
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -240,7 +252,7 @@ export default function MenuManagementPage() {
                     disabled={uploading}
                     className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 font-black text-[10px] uppercase tracking-widest text-gray-400 hover:border-black hover:text-black transition-all disabled:opacity-50"
                   >
-                    {uploading ? 'Uploading...' : form.image ? 'Replace Image' : 'Upload Image'}
+                    {uploading ? 'Uploading...' : 'Upload from device'}
                   </button>
                 </div>
               </div>

@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
+import { Icons } from '@/components/Icons';
 import { Order } from '@/types';
 
 function playNotificationBeep() {
@@ -44,12 +44,14 @@ function mapOrder(raw: any): Order {
 }
 
 export default function OrdersPage() {
-  const { t } = useAppContext();
+  const { t, addToast } = useAppContext();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<'all' | 'processing' | 'completed'>('all');
   const [loading, setLoading] = useState(true);
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const newOrderTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [updating, setUpdating] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     const res = await fetch('/api/orders');
@@ -63,7 +65,6 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders();
 
-    // Supabase Realtime subscription
     const channel = supabase
       .channel('orders-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
@@ -80,6 +81,7 @@ export default function OrdersPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
         const updated = mapOrder(payload.new);
         setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+        setSelectedOrder(prev => prev?.id === updated.id ? updated : prev);
       })
       .subscribe();
 
@@ -96,6 +98,26 @@ export default function OrdersPage() {
     processing: orders.filter(o => o.status === 'processing').length,
     completed: orders.filter(o => o.status === 'completed').length,
   }), [orders]);
+
+  const markComplete = async () => {
+    if (!selectedOrder) return;
+    setUpdating(true);
+    const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const updated = mapOrder(data);
+      setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+      setSelectedOrder(updated);
+      addToast('Order marked as completed', 'success');
+    } else {
+      addToast('Failed to update status', 'error');
+    }
+    setUpdating(false);
+  };
 
   return (
     <div className="pt-[100px] px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
@@ -116,14 +138,11 @@ export default function OrdersPage() {
             onClick={() => setFilter(f)}
             className={`p-6 rounded-3xl border transition-all text-center ${filter === f
               ? f === 'completed' ? 'bg-green-500 text-white border-green-500 shadow-xl scale-105'
-                : f === 'processing' ? 'bg-black text-white border-black shadow-xl scale-105'
                 : 'bg-black text-white border-black shadow-xl scale-105'
               : 'bg-white border-gray-100 shadow-sm text-black hover:border-gray-300'}`}
           >
-            <p className={`text-[9px] font-black uppercase mb-2 ${filter === f ? 'text-gray-300' : 'text-gray-300'}`}>
-              {f.toUpperCase()}
-            </p>
-            <p className={`text-3xl font-black ${filter === f && f === 'completed' ? 'text-white' : filter === f ? 'text-white' : f === 'completed' ? 'text-green-500' : f === 'processing' ? 'text-yellow-500' : 'text-black'}`}>
+            <p className="text-[9px] font-black uppercase mb-2 text-gray-300">{f.toUpperCase()}</p>
+            <p className={`text-3xl font-black ${filter === f ? 'text-white' : f === 'completed' ? 'text-green-500' : f === 'processing' ? 'text-yellow-500' : 'text-black'}`}>
               {counts[f]}
             </p>
           </button>
@@ -137,10 +156,10 @@ export default function OrdersPage() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {filtered.map(order => (
-            <Link
+            <button
               key={order.id}
-              href={`/dashboard/orders/${order.id}`}
-              className={`bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all relative overflow-hidden group ${newOrderIds.has(order.id) ? 'animate-new-order' : ''}`}
+              onClick={() => setSelectedOrder(order)}
+              className={`bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all relative overflow-hidden text-left w-full ${newOrderIds.has(order.id) ? 'animate-new-order' : ''}`}
             >
               <div className={`absolute top-0 left-0 w-1.5 h-full ${order.status === 'completed' ? 'bg-green-500' : 'bg-yellow-400'}`} />
               <div className="flex justify-between items-start mb-3">
@@ -168,7 +187,7 @@ export default function OrdersPage() {
                 </span>
                 <span className="font-black text-lg">{order.total.toFixed(2)}€</span>
               </div>
-            </Link>
+            </button>
           ))}
         </div>
       )}
@@ -176,6 +195,109 @@ export default function OrdersPage() {
       {!loading && filtered.length === 0 && (
         <div className="text-center py-20">
           <p className="text-gray-300 font-black uppercase tracking-widest text-sm">No orders in this category</p>
+        </div>
+      )}
+
+      {/* Order detail modal */}
+      {selectedOrder && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedOrder(null)}
+        >
+          <div
+            className="bg-white rounded-[2.5rem] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-zoom-in"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-8 md:p-10">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1">
+                    {new Date(selectedOrder.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    {' · '}
+                    {new Date(selectedOrder.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <h2 className="text-2xl font-black uppercase tracking-tight">{selectedOrder.orderNumber}</h2>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase ${selectedOrder.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {selectedOrder.status === 'completed' ? t.dashboard.completed : t.dashboard.processing}
+                  </span>
+                  <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
+                    <Icons.Close />
+                  </button>
+                </div>
+              </div>
+
+              {/* Customer info */}
+              <div className="grid grid-cols-2 gap-6 uppercase font-black tracking-tight text-[11px] mb-8 bg-gray-50 rounded-2xl p-5">
+                <div>
+                  <p className="text-gray-300 mb-1">{t.dashboard.customer}</p>
+                  <p className="text-sm">{selectedOrder.customerName}</p>
+                  <p className="text-gray-400 mt-1 font-bold">{selectedOrder.phone}</p>
+                </div>
+                <div>
+                  <p className="text-gray-300 mb-1">{t.dashboard.deliveryAddress}</p>
+                  <p className="text-sm">{selectedOrder.address}</p>
+                  <p className="text-gray-400 mt-1 font-bold">{selectedOrder.zipCode} {selectedOrder.city}</p>
+                  {selectedOrder.deliveryNote && <p className="text-gray-400 mt-1 italic font-bold">{selectedOrder.deliveryNote}</p>}
+                </div>
+              </div>
+
+              {/* Payment */}
+              <div className="mb-6">
+                <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-2">{t.dashboard.paymentStatus}</p>
+                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${selectedOrder.paymentMethod === 'online' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
+                  {selectedOrder.paymentMethod === 'online' ? 'Online (Card)' : 'Cash on Delivery'}
+                </span>
+              </div>
+
+              {/* Items */}
+              <div className="border-t border-gray-100 pt-6 space-y-3 mb-6">
+                {selectedOrder.items.map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between font-bold text-sm uppercase">
+                    <span>{item.quantity}× {item.name}</span>
+                    <span className="font-black">{(item.price * item.quantity).toFixed(2)}€</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Totals */}
+              <div className="border-t border-gray-100 pt-4 space-y-2 mb-8">
+                <div className="flex justify-between text-[11px] font-black uppercase text-gray-400">
+                  <span>Subtotal</span>
+                  <span>{selectedOrder.subtotal.toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between text-[11px] font-black uppercase text-gray-400">
+                  <span>Delivery</span>
+                  <span>{selectedOrder.deliveryFee.toFixed(2)}€</span>
+                </div>
+                <div className="flex justify-between font-black text-2xl tracking-tighter pt-3 border-t border-gray-100">
+                  <span>TOTAL</span>
+                  <span>{selectedOrder.total.toFixed(2)}€</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                {selectedOrder.status === 'processing' && (
+                  <button
+                    onClick={markComplete}
+                    disabled={updating}
+                    className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Icons.Check /> {updating ? '...' : t.dashboard.markComplete}
+                  </button>
+                )}
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-2 bg-gray-100 text-black px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black hover:text-white transition-all"
+                >
+                  <Icons.Print /> {t.dashboard.print}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
