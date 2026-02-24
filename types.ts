@@ -37,4 +37,5 @@ export interface Order {
   total: number;
   stripeSessionId?: string;
   createdAt: string;
+  acknowledgedAt?: string | null;
 }

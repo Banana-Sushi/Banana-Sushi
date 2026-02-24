@@ -168,9 +168,50 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* Print-only footer */}
-      <div className="hidden print:block mt-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold">
-        BANANA SUSHI · Sushi-Allee 42, 10115 Berlin · +49 (0) 30 123 456 78
+      {/* Receipt — only visible on print */}
+      <div className="receipt-print" style={{ display: 'none' }}>
+        <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px dashed #000' }}>
+            <div style={{ fontWeight: 900, fontSize: '15px', letterSpacing: '2px' }}>BANANA SUSHI.</div>
+            <div style={{ fontSize: '10px' }}>Sushi-Allee 42, 10115 Berlin</div>
+            <div style={{ fontSize: '10px' }}>+49 (0) 30 123 456 78</div>
+          </div>
+          <div style={{ marginBottom: '8px' }}>
+            <div><strong>ORDER {order.orderNumber}</strong></div>
+            <div>{new Date(order.createdAt).toLocaleDateString('de-DE')} {new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', marginBottom: '8px' }}>
+            <div><strong>{order.customerName}</strong></div>
+            <div>{order.phone}</div>
+            <div>{order.address}</div>
+            <div>{order.zipCode} {order.city}</div>
+            {order.deliveryNote && <div><em>Note: {order.deliveryNote}</em></div>}
+          </div>
+          <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', marginBottom: '8px' }}>
+            {order.items.map((item, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>{item.quantity}x {item.name}</span>
+                <span>{(item.price * item.quantity).toFixed(2)}€</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+              <span>Subtotal</span><span>{order.subtotal.toFixed(2)}€</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+              <span>Delivery</span><span>{order.deliveryFee.toFixed(2)}€</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '14px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #000' }}>
+              <span>TOTAL</span><span>{order.total.toFixed(2)}€</span>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', textAlign: 'center', fontSize: '10px' }}>
+            <div>Zahlung: {order.paymentMethod === 'online' ? 'Online' : 'Bar bei Lieferung'}</div>
+            <div style={{ marginTop: '8px' }}>Vielen Dank für Ihre Bestellung!</div>
+            <div>Thank you for your order!</div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   });
 
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
+    payment_method_types: ['card', 'paypal', 'sepa_debit', 'klarna'],
     line_items: lineItems,
     mode: 'payment',
     success_url: `${baseUrl}/order/success`,

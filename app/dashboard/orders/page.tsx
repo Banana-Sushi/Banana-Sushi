@@ -40,7 +40,24 @@ function mapOrder(raw: any): Order {
     total: Number(raw.total),
     stripeSessionId: raw.stripe_session_id,
     createdAt: raw.created_at,
+    acknowledgedAt: raw.acknowledged_at ?? null,
   };
+}
+
+function OrderStatusPill({ order }: { order: Order }) {
+  if (order.status === 'completed') {
+    return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-green-50 text-green-500">Completed</span>;
+  }
+  if (!order.acknowledgedAt) {
+    return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-red-50 text-red-500 animate-pulse">New</span>;
+  }
+  return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-yellow-50 text-yellow-600">In Kitchen</span>;
+}
+
+function orderBarColor(order: Order) {
+  if (order.status === 'completed') return 'bg-green-500';
+  if (!order.acknowledgedAt) return 'bg-red-400';
+  return 'bg-yellow-400';
 }
 
 export default function OrdersPage() {
@@ -71,6 +88,7 @@ export default function OrdersPage() {
         const newOrder = mapOrder(payload.new);
         setOrders(prev => [newOrder, ...prev]);
         playNotificationBeep();
+        // Brief animation on arrival
         setNewOrderIds(prev => new Set([...prev, newOrder.id]));
         const timer = setTimeout(() => {
           setNewOrderIds(prev => { const next = new Set(prev); next.delete(newOrder.id); return next; });
@@ -88,6 +106,21 @@ export default function OrdersPage() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchOrders]);
 
+  const openOrder = useCallback((order: Order) => {
+    setSelectedOrder(order);
+    if (!order.acknowledgedAt) {
+      const now = new Date().toISOString();
+      // Optimistic update
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, acknowledgedAt: now } : o));
+      setSelectedOrder({ ...order, acknowledgedAt: now });
+      fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acknowledged_at: now }),
+      });
+    }
+  }, []);
+
   const filtered = useMemo(() => {
     if (filter === 'all') return orders;
     return orders.filter(o => o.status === filter);
@@ -97,6 +130,7 @@ export default function OrdersPage() {
     all: orders.length,
     processing: orders.filter(o => o.status === 'processing').length,
     completed: orders.filter(o => o.status === 'completed').length,
+    new: orders.filter(o => o.status === 'processing' && !o.acknowledgedAt).length,
   }), [orders]);
 
   const markComplete = async () => {
@@ -145,6 +179,9 @@ export default function OrdersPage() {
             <p className={`text-3xl font-black ${filter === f ? 'text-white' : f === 'completed' ? 'text-green-500' : f === 'processing' ? 'text-yellow-500' : 'text-black'}`}>
               {counts[f]}
             </p>
+            {f === 'processing' && counts.new > 0 && (
+              <p className="text-[8px] font-black uppercase mt-1 text-red-400">{counts.new} new</p>
+            )}
           </button>
         ))}
       </div>
@@ -158,16 +195,22 @@ export default function OrdersPage() {
           {filtered.map(order => (
             <button
               key={order.id}
-              onClick={() => setSelectedOrder(order)}
-              className={`bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all relative overflow-hidden text-left w-full ${newOrderIds.has(order.id) ? 'animate-new-order' : ''}`}
+              onClick={() => openOrder(order)}
+              className={`bg-white p-8 rounded-[2rem] shadow-sm border transition-all relative overflow-hidden text-left w-full hover:shadow-xl ${
+                newOrderIds.has(order.id) ? 'animate-new-order' : ''
+              } ${
+                !order.acknowledgedAt && order.status === 'processing'
+                  ? 'border-red-200 ring-1 ring-red-200'
+                  : 'border-gray-100'
+              }`}
             >
-              <div className={`absolute top-0 left-0 w-1.5 h-full ${order.status === 'completed' ? 'bg-green-500' : 'bg-yellow-400'}`} />
+              <div className={`absolute top-0 left-0 w-1.5 h-full ${orderBarColor(order)}`} />
               <div className="flex justify-between items-start mb-3">
                 <p className="text-[9px] font-black text-gray-300 uppercase">
                   {order.orderNumber} · {new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
                 </p>
-                {newOrderIds.has(order.id) && (
-                  <span className="text-[8px] font-black uppercase tracking-widest bg-yellow-400 text-black px-2 py-1 rounded-lg animate-fade-in">NEW</span>
+                {!order.acknowledgedAt && order.status === 'processing' && (
+                  <span className="text-[8px] font-black uppercase tracking-widest bg-red-400 text-white px-2 py-1 rounded-lg animate-fade-in">NEW</span>
                 )}
               </div>
               <h3 className="text-xl font-black uppercase mb-3 truncate">{order.customerName}</h3>
@@ -182,9 +225,7 @@ export default function OrdersPage() {
                 )}
               </ul>
               <div className="flex justify-between items-center">
-                <span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase ${order.status === 'completed' ? 'bg-green-50 text-green-500' : 'bg-yellow-50 text-yellow-600'}`}>
-                  {order.status === 'completed' ? t.dashboard.completed : t.dashboard.processing}
-                </span>
+                <OrderStatusPill order={order} />
                 <span className="font-black text-lg">{order.total.toFixed(2)}€</span>
               </div>
             </button>
@@ -220,9 +261,7 @@ export default function OrdersPage() {
                   <h2 className="text-2xl font-black uppercase tracking-tight">{selectedOrder.orderNumber}</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase ${selectedOrder.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {selectedOrder.status === 'completed' ? t.dashboard.completed : t.dashboard.processing}
-                  </span>
+                  <OrderStatusPill order={selectedOrder} />
                   <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
                     <Icons.Close />
                   </button>
@@ -248,7 +287,7 @@ export default function OrdersPage() {
               <div className="mb-6">
                 <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-2">{t.dashboard.paymentStatus}</p>
                 <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${selectedOrder.paymentMethod === 'online' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
-                  {selectedOrder.paymentMethod === 'online' ? 'Online (Card)' : 'Cash on Delivery'}
+                  {selectedOrder.paymentMethod === 'online' ? 'Online' : 'Cash on Delivery'}
                 </span>
               </div>
 
@@ -296,6 +335,54 @@ export default function OrdersPage() {
                   <Icons.Print /> {t.dashboard.print}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt — only visible on print */}
+      {selectedOrder && (
+        <div className="receipt-print" style={{ display: 'none' }}>
+          <div style={{ fontFamily: 'monospace', fontSize: '11px', padding: '0' }}>
+            <div style={{ textAlign: 'center', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px dashed #000' }}>
+              <div style={{ fontWeight: 900, fontSize: '15px', letterSpacing: '2px' }}>BANANA SUSHI.</div>
+              <div style={{ fontSize: '10px' }}>Sushi-Allee 42, 10115 Berlin</div>
+              <div style={{ fontSize: '10px' }}>+49 (0) 30 123 456 78</div>
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <div><strong>ORDER {selectedOrder.orderNumber}</strong></div>
+              <div>{new Date(selectedOrder.createdAt).toLocaleDateString('de-DE')} {new Date(selectedOrder.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+            <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', marginBottom: '8px' }}>
+              <div><strong>{selectedOrder.customerName}</strong></div>
+              <div>{selectedOrder.phone}</div>
+              <div>{selectedOrder.address}</div>
+              <div>{selectedOrder.zipCode} {selectedOrder.city}</div>
+              {selectedOrder.deliveryNote && <div><em>Note: {selectedOrder.deliveryNote}</em></div>}
+            </div>
+            <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', marginBottom: '8px' }}>
+              {selectedOrder.items.map((item: any, i: number) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{item.quantity}x {item.name}</span>
+                  <span>{(item.price * item.quantity).toFixed(2)}€</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                <span>Subtotal</span><span>{selectedOrder.subtotal.toFixed(2)}€</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                <span>Delivery</span><span>{selectedOrder.deliveryFee.toFixed(2)}€</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '14px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #000' }}>
+                <span>TOTAL</span><span>{selectedOrder.total.toFixed(2)}€</span>
+              </div>
+            </div>
+            <div style={{ borderTop: '1px dashed #000', paddingTop: '8px', textAlign: 'center', fontSize: '10px' }}>
+              <div>Zahlung: {selectedOrder.paymentMethod === 'online' ? 'Online' : 'Bar bei Lieferung'}</div>
+              <div style={{ marginTop: '8px' }}>Vielen Dank für Ihre Bestellung!</div>
+              <div>Thank you for your order!</div>
             </div>
           </div>
         </div>
