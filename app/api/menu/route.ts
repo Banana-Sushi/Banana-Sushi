@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const token = req.cookies.get('auth_token')?.value;
   const user = token ? await verifyToken(token) : null;
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
   const supabase = createServerSupabaseClient();

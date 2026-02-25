@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from './Icons';
 
-export const Navbar = () => {
+export const Navbar = ({ role }: { role?: 'admin' | 'staff' | null }) => {
   const { lang, setLang, t, cart } = useAppContext();
   const pathname = usePathname();
   const isDashboard = pathname.startsWith('/dashboard');
@@ -64,8 +64,8 @@ export const Navbar = () => {
             <div className="flex items-center gap-8">
               <Link href="/dashboard/orders" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/orders' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.orders}</Link>
               <Link href="/dashboard/history" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/history' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.history}</Link>
-              <Link href="/dashboard/stats" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/stats' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.stats}</Link>
-              <Link href="/dashboard/menu" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/menu' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.menuMgmt}</Link>
+              {role === 'admin' && <Link href="/dashboard/stats" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/stats' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.stats}</Link>}
+              {role === 'admin' && <Link href="/dashboard/menu" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/menu' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.menuMgmt}</Link>}
             </div>
           )}
         </div>

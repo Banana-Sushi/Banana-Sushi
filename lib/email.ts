@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 import { Order } from '@/types';
 
 const transporter = nodemailer.createTransport({
@@ -20,7 +21,9 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     ];
     for (const p of candidates) {
       if (fs.existsSync(p)) {
-        logoSrc = `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
+        // Resize to 240px wide max — keeps base64 under ~15KB so Gmail won't clip the email
+        const resized = await sharp(p).resize({ width: 240, withoutEnlargement: true }).png({ quality: 80 }).toBuffer();
+        logoSrc = `data:image/png;base64,${resized.toString('base64')}`;
         break;
       }
     }

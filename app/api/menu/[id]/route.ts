@@ -3,9 +3,10 @@ import { revalidatePath } from 'next/cache';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { verifyToken } from '@/lib/auth';
 
-async function requireAuth(req: NextRequest) {
+async function requireAdmin(req: NextRequest) {
   const token = req.cookies.get('auth_token')?.value;
-  return token ? await verifyToken(token) : null;
+  const user = token ? await verifyToken(token) : null;
+  return user?.role === 'admin' ? user : null;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,8 +19,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireAuth(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await requireAdmin(req);
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
   const supabase = createServerSupabaseClient();
@@ -47,8 +48,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireAuth(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await requireAdmin(req);
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const supabase = createServerSupabaseClient();
   const { error } = await supabase.from('menu_items').delete().eq('id', id);

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 
+const ADMIN_ONLY = ['/dashboard/stats', '/dashboard/menu'];
+
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
@@ -12,6 +14,11 @@ export async function middleware(req: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL('/dashboard/login', req.url));
+  }
+
+  // Staff cannot access admin-only sections
+  if (user.role !== 'admin' && ADMIN_ONLY.some(p => pathname.startsWith(p))) {
+    return NextResponse.redirect(new URL('/dashboard/orders', req.url));
   }
 
   return NextResponse.next();
