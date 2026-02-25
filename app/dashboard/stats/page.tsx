@@ -107,7 +107,7 @@ export default function StatsPage() {
       </h2>
 
       {/* Revenue row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm text-center">
           <p className="text-[9px] font-black text-gray-300 uppercase mb-3 tracking-widest">Today</p>
           <p className="text-3xl font-black tracking-tighter">{stats.revenueToday.toFixed(2)}€</p>
@@ -117,16 +117,6 @@ export default function StatsPage() {
           <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">This Month</p>
           <p className="text-3xl font-black tracking-tighter text-yellow-400">{stats.revenueMonth.toFixed(2)}€</p>
           <p className="text-[9px] font-black text-gray-400 uppercase mt-2">{stats.ordersMonth} orders</p>
-        </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm text-center">
-          <p className="text-[9px] font-black text-gray-300 uppercase mb-3 tracking-widest">All Time</p>
-          <p className="text-3xl font-black tracking-tighter">{stats.revenueTotal.toFixed(2)}€</p>
-          <p className="text-[9px] font-black text-gray-300 uppercase mt-2">{stats.ordersTotal} orders</p>
-        </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm text-center">
-          <p className="text-[9px] font-black text-gray-300 uppercase mb-3 tracking-widest">Avg. Order</p>
-          <p className="text-3xl font-black tracking-tighter">{stats.avgOrder.toFixed(2)}€</p>
-          <p className="text-[9px] font-black text-gray-300 uppercase mt-2">per order</p>
         </div>
       </div>
 

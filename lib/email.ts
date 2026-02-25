@@ -12,11 +12,19 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendOrderConfirmationEmail(order: Order, customerEmail: string) {
-  const logoPaths = [
-    path.join(process.cwd(), 'public', 'logo.png'),
-    path.join(process.cwd(), 'logo.png'),
-  ];
-  const resolvedLogoPath = logoPaths.find(p => fs.existsSync(p)) ?? null;
+  let logoSrc: string | null = null;
+  try {
+    const candidates = [
+      path.join(process.cwd(), 'public', 'logo.png'),
+      path.join(process.cwd(), 'logo.png'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        logoSrc = `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
+        break;
+      }
+    }
+  } catch { /* fall through to text fallback */ }
 
   const itemsHtml = order.items
     .map(item => `<tr>
@@ -25,8 +33,8 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     </tr>`)
     .join('');
 
-  const logoHtml = resolvedLogoPath
-    ? `<img src="cid:logo" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`
+  const logoHtml = logoSrc
+    ? `<img src="${logoSrc}" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`
     : `<h1 style="color:#000;font-size:28px;font-weight:900;letter-spacing:-1px;margin:0;">BANANA SUSHI<span style="color:#fbbf24;">.</span></h1>`;
 
   const html = `
@@ -81,8 +89,5 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     to: customerEmail,
     subject: `Order confirmed — ${order.orderNumber} · Banana Sushi`,
     html,
-    attachments: resolvedLogoPath
-      ? [{ filename: 'logo.png', path: resolvedLogoPath, cid: 'logo' }]
-      : [],
   });
 }
