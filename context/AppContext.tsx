@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, MenuItem } from '@/types';
 import { translations } from '@/translations';
 
@@ -37,9 +37,27 @@ export const useAppContext = () => {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [lang, setLang] = useState<Language>('de');
+  const [lang, setLangState] = useState<Language>('de');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  useEffect(() => {
+    const savedLang = localStorage.getItem('lang') as Language;
+    if (savedLang === 'de' || savedLang === 'en') setLangState(savedLang);
+    try {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) setCart(JSON.parse(savedCart));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
+
+  const setLang = (l: Language) => {
+    setLangState(l);
+    localStorage.setItem('lang', l);
+  };
 
   const t = translations[lang];
 

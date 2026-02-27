@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useAppContext } from '@/context/AppContext';
 
 export default function SuccessPage() {
-  const { t } = useAppContext();
+  const { t, clearCart } = useAppContext();
+
+  useEffect(() => { clearCart(); }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center pt-20 px-4 text-center animate-fade-in">

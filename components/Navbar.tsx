@@ -47,7 +47,7 @@ export const Navbar = ({ role }: { role?: 'admin' | 'staff' | null }) => {
     >
       {!isDashboard && (
         <Link href="/">
-          <Image src="/logo.png" alt="Banana Sushi" width={240} height={60} className="h-12 md:h-16 w-auto" priority />
+          <Image src="/logo.png" alt="Banana Sushi" width={240} height={60} className="h-16 md:h-20 w-auto" priority />
         </Link>
       )}
 

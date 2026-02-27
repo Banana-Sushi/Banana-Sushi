@@ -28,7 +28,7 @@ export const DashboardSidebar = ({ role }: { role?: 'admin' | 'staff' | null }) 
   return (
     <aside className="fixed top-0 left-0 bottom-0 w-24 hidden lg:flex flex-col items-center py-10 bg-black border-r border-gray-900 z-50 print:hidden">
       <div className="mb-10">
-        <Image src="/logo.png" alt="Banana Sushi" width={72} height={72} className="w-16 h-auto" />
+        <Image src="/logo.png" alt="Banana Sushi" width={80} height={80} className="w-20 h-auto" />
       </div>
       <div className="flex flex-col gap-10 flex-1">
         {links.map(link => (

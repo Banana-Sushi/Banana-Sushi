@@ -1,6 +1,4 @@
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
 import { Order } from '@/types';
 
 const transporter = nodemailer.createTransport({
@@ -11,20 +9,9 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-function findLogoPath(): string | null {
-  const candidates = [
-    path.join(process.cwd(), 'public', 'logo.png'),
-    path.join(process.cwd(), 'logo.png'),
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  return null;
-}
+const LOGO_URL = 'https://bananasushi.de/logo.png';
 
 export async function sendOrderConfirmationEmail(order: Order, customerEmail: string) {
-  const logoPath = findLogoPath();
-
   const itemsHtml = order.items
     .map(item => `<tr>
       <td style="padding:8px 0;font-weight:bold;">${item.quantity}x ${item.name}</td>
@@ -32,9 +19,7 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     </tr>`)
     .join('');
 
-  const logoHtml = logoPath
-    ? `<img src="cid:logo" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`
-    : '';
+  const logoHtml = `<img src="${LOGO_URL}" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`;
 
   const html = `
     <!DOCTYPE html>
@@ -88,6 +73,5 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     to: customerEmail,
     subject: `Order confirmed — ${order.orderNumber} · Banana Sushi`,
     html,
-    attachments: logoPath ? [{ filename: 'logo.png', path: logoPath, cid: 'logo' }] : [],
   });
 }
