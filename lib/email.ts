@@ -1,7 +1,6 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
-import sharp from 'sharp';
 import { Order } from '@/types';
 
 const transporter = nodemailer.createTransport({
@@ -12,22 +11,22 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function getLogoBase64(): string | null {
+  const candidates = [
+    path.join(process.cwd(), 'public', 'logo.png'),
+    path.join(process.cwd(), 'logo.png'),
+  ];
+  for (const p of candidates) {
+    try {
+      const buf = fs.readFileSync(p);
+      return `data:image/png;base64,${buf.toString('base64')}`;
+    } catch { continue; }
+  }
+  return null;
+}
+
 export async function sendOrderConfirmationEmail(order: Order, customerEmail: string) {
-  let logoSrc: string | null = null;
-  try {
-    const candidates = [
-      path.join(process.cwd(), 'public', 'logo.png'),
-      path.join(process.cwd(), 'logo.png'),
-    ];
-    for (const p of candidates) {
-      if (fs.existsSync(p)) {
-        // Resize to 240px wide max — keeps base64 under ~15KB so Gmail won't clip the email
-        const resized = await sharp(p).resize({ width: 240, withoutEnlargement: true }).png({ quality: 80 }).toBuffer();
-        logoSrc = `data:image/png;base64,${resized.toString('base64')}`;
-        break;
-      }
-    }
-  } catch { /* fall through to text fallback */ }
+  const logoSrc = getLogoBase64();
 
   const itemsHtml = order.items
     .map(item => `<tr>
@@ -38,7 +37,7 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
 
   const logoHtml = logoSrc
     ? `<img src="${logoSrc}" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`
-    : `<h1 style="color:#000;font-size:28px;font-weight:900;letter-spacing:-1px;margin:0;">BANANA SUSHI<span style="color:#fbbf24;">.</span></h1>`;
+    : '';
 
   const html = `
     <!DOCTYPE html>

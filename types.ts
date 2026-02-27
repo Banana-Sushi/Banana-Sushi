@@ -11,7 +11,7 @@ export interface MenuItem {
   isFeatured?: boolean;
 }
 
-export type OrderStatus = 'processing' | 'completed';
+export type OrderStatus = 'pending' | 'processing' | 'completed';
 
 export interface OrderItem {
   menuItemId: string;

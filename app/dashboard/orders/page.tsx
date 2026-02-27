@@ -51,7 +51,7 @@ function OrderStatusPill({ order }: { order: Order }) {
   if (!order.acknowledgedAt) {
     return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-red-50 text-red-500 animate-pulse">New</span>;
   }
-  return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-yellow-50 text-yellow-600">In Kitchen</span>;
+  return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-yellow-50 text-yellow-600">Processing</span>;
 }
 
 function orderBarColor(order: Order) {
@@ -86,9 +86,9 @@ export default function OrdersPage() {
       .channel('orders-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
         const newOrder = mapOrder(payload.new);
+        if (newOrder.status === 'pending') return; // wait for payment confirmation
         setOrders(prev => [newOrder, ...prev]);
         playNotificationBeep();
-        // Brief animation on arrival
         setNewOrderIds(prev => new Set([...prev, newOrder.id]));
         const timer = setTimeout(() => {
           setNewOrderIds(prev => { const next = new Set(prev); next.delete(newOrder.id); return next; });
@@ -98,6 +98,20 @@ export default function OrdersPage() {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
         const updated = mapOrder(payload.new);
+        const waspending = (payload.old as any)?.status === 'pending';
+        if (waspending && updated.status === 'processing') {
+          // Payment confirmed — add to dashboard now
+          setOrders(prev => [updated, ...prev]);
+          playNotificationBeep();
+          setNewOrderIds(prev => new Set([...prev, updated.id]));
+          const timer = setTimeout(() => {
+            setNewOrderIds(prev => { const next = new Set(prev); next.delete(updated.id); return next; });
+            newOrderTimers.current.delete(updated.id);
+          }, 2500);
+          newOrderTimers.current.set(updated.id, timer);
+          return;
+        }
+        if (updated.status === 'pending') return; // ignore other pending updates
         setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
         setSelectedOrder(prev => prev?.id === updated.id ? updated : prev);
       })
@@ -108,18 +122,21 @@ export default function OrdersPage() {
 
   const openOrder = useCallback((order: Order) => {
     setSelectedOrder(order);
-    if (!order.acknowledgedAt) {
+  }, []);
+
+  const handlePrint = useCallback(() => {
+    if (selectedOrder && !selectedOrder.acknowledgedAt) {
       const now = new Date().toISOString();
-      // Optimistic update
-      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, acknowledgedAt: now } : o));
-      setSelectedOrder({ ...order, acknowledgedAt: now });
-      fetch(`/api/orders/${order.id}`, {
+      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, acknowledgedAt: now } : o));
+      setSelectedOrder(prev => prev ? { ...prev, acknowledgedAt: now } : prev);
+      fetch(`/api/orders/${selectedOrder.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ acknowledged_at: now }),
       });
     }
-  }, []);
+    window.print();
+  }, [selectedOrder]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return orders;
@@ -329,7 +346,7 @@ export default function OrdersPage() {
                   </button>
                 )}
                 <button
-                  onClick={() => window.print()}
+                  onClick={handlePrint}
                   className="flex items-center gap-2 bg-gray-100 text-black px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black hover:text-white transition-all"
                 >
                   <Icons.Print /> {t.dashboard.print}

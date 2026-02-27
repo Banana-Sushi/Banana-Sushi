@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       city: body.city,
       delivery_note: body.deliveryNote ?? null,
       payment_method: 'online',
-      status: 'processing',
+      status: 'pending',
       items: body.items,
       subtotal: body.subtotal,
       delivery_fee: body.deliveryFee,
