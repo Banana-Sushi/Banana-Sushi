@@ -11,22 +11,19 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-function getLogoBase64(): string | null {
+function findLogoPath(): string | null {
   const candidates = [
     path.join(process.cwd(), 'public', 'logo.png'),
     path.join(process.cwd(), 'logo.png'),
   ];
   for (const p of candidates) {
-    try {
-      const buf = fs.readFileSync(p);
-      return `data:image/png;base64,${buf.toString('base64')}`;
-    } catch { continue; }
+    if (fs.existsSync(p)) return p;
   }
   return null;
 }
 
 export async function sendOrderConfirmationEmail(order: Order, customerEmail: string) {
-  const logoSrc = getLogoBase64();
+  const logoPath = findLogoPath();
 
   const itemsHtml = order.items
     .map(item => `<tr>
@@ -35,8 +32,8 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     </tr>`)
     .join('');
 
-  const logoHtml = logoSrc
-    ? `<img src="${logoSrc}" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`
+  const logoHtml = logoPath
+    ? `<img src="cid:logo" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />`
     : '';
 
   const html = `
@@ -91,5 +88,6 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     to: customerEmail,
     subject: `Order confirmed — ${order.orderNumber} · Banana Sushi`,
     html,
+    attachments: logoPath ? [{ filename: 'logo.png', path: logoPath, cid: 'logo' }] : [],
   });
 }

@@ -67,6 +67,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const newOrderTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const seenOrderIds = useRef<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [updating, setUpdating] = useState(false);
 
@@ -74,7 +75,9 @@ export default function OrdersPage() {
     const res = await fetch('/api/orders');
     if (res.ok) {
       const data = await res.json();
-      setOrders(data.map(mapOrder));
+      const mapped = data.map(mapOrder);
+      setOrders(mapped);
+      mapped.forEach((o: Order) => seenOrderIds.current.add(o.id));
     }
     setLoading(false);
   }, []);
@@ -87,6 +90,7 @@ export default function OrdersPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
         const newOrder = mapOrder(payload.new);
         if (newOrder.status === 'pending') return; // wait for payment confirmation
+        seenOrderIds.current.add(newOrder.id);
         setOrders(prev => [newOrder, ...prev]);
         playNotificationBeep();
         setNewOrderIds(prev => new Set([...prev, newOrder.id]));
@@ -98,9 +102,11 @@ export default function OrdersPage() {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
         const updated = mapOrder(payload.new);
-        const waspending = (payload.old as any)?.status === 'pending';
-        if (waspending && updated.status === 'processing') {
-          // Payment confirmed — add to dashboard now
+        if (updated.status === 'pending') return;
+
+        const isNew = !seenOrderIds.current.has(updated.id);
+        if (isNew && updated.status === 'processing') {
+          seenOrderIds.current.add(updated.id);
           setOrders(prev => [updated, ...prev]);
           playNotificationBeep();
           setNewOrderIds(prev => new Set([...prev, updated.id]));
@@ -111,7 +117,7 @@ export default function OrdersPage() {
           newOrderTimers.current.set(updated.id, timer);
           return;
         }
-        if (updated.status === 'pending') return; // ignore other pending updates
+
         setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
         setSelectedOrder(prev => prev?.id === updated.id ? updated : prev);
       })
