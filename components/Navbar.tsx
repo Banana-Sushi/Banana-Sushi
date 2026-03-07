@@ -66,6 +66,7 @@ export const Navbar = ({ role }: { role?: 'admin' | 'staff' | null }) => {
               <Link href="/dashboard/history" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/history' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.history}</Link>
               {role === 'admin' && <Link href="/dashboard/stats" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/stats' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.stats}</Link>}
               {role === 'admin' && <Link href="/dashboard/menu" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/menu' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>{t.dashboard.menuMgmt}</Link>}
+              {role === 'admin' && <Link href="/dashboard/content" className={`text-[11px] font-black uppercase tracking-[0.2em] ${pathname === '/dashboard/content' ? 'text-black' : 'text-gray-300 hover:text-black'}`}>Content</Link>}
             </div>
           )}
         </div>

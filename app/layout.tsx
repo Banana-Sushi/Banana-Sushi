@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { cookies } from 'next/headers';
 import '@/globals.css';
 import { AppProvider } from '@/context/AppContext';
+import { LangSync } from '@/components/LangSync';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { ToastContainer } from '@/components/Toast';
@@ -34,9 +35,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const role = (user?.role ?? null) as 'admin' | 'staff' | null;
 
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning>
       <body className={`${inter.className} bg-white overflow-x-hidden selection:bg-yellow-200`}>
         <AppProvider>
+          <LangSync />
           <Navbar role={role} />
           <main className="min-h-screen flex flex-col">
             {children}

@@ -2,12 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '@/components/Icons';
-
-const DELIVERY_FEE = 2.90;
 
 export default function OrderPage() {
   const { cart, removeFromCart, clearCart, t, lang, addToast } = useAppContext();
@@ -15,9 +13,20 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online');
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', zip: '', city: '', note: '' });
+  const [deliveryFee, setDeliveryFee] = useState(2.90);
+
+  useEffect(() => {
+    fetch('/api/content')
+      .then(r => r.json())
+      .then(data => {
+        const fee = parseFloat(data.delivery_fee);
+        if (!isNaN(fee)) setDeliveryFee(fee);
+      })
+      .catch(() => {});
+  }, []);
 
   const subtotal = cart.reduce((acc, c) => acc + c.item.price * c.quantity, 0);
-  const total = subtotal + DELIVERY_FEE;
+  const total = subtotal + deliveryFee;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +49,7 @@ export default function OrderPage() {
         price: c.item.price,
       })),
       subtotal,
-      deliveryFee: DELIVERY_FEE,
+      deliveryFee: deliveryFee,
       total,
     };
 
@@ -90,17 +99,15 @@ export default function OrderPage() {
         {/* Cart summary */}
         <div className="flex-1 space-y-8 bg-white p-8 md:p-12 rounded-[2.5rem] border border-gray-100 shadow-sm">
           {cart.map(c => (
-            <div key={c.item.id} className="flex justify-between items-center py-6 border-b border-gray-50 last:border-0">
-              <div className="flex items-center gap-5">
-                <div className="relative w-16 h-16 rounded-2xl overflow-hidden">
-                  <Image src={c.item.image} alt={c.item.name[lang]} fill className="object-cover" sizes="64px" />
-                </div>
-                <div className="font-black uppercase">
-                  <p className="text-sm">{c.item.name[lang]}</p>
-                  <p className="text-gray-300 text-[10px] mt-1">{c.quantity}x {c.item.price.toFixed(2)}€</p>
-                </div>
+            <div key={c.item.id} className="flex items-center gap-4 py-6 border-b border-gray-50 last:border-0">
+              <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0">
+                <Image src={c.item.image} alt={c.item.name[lang]} fill className="object-cover" sizes="64px" />
               </div>
-              <div className="flex items-center gap-6">
+              <div className="font-black uppercase flex-1 min-w-0">
+                <p className="text-sm truncate">{c.item.name[lang]}</p>
+                <p className="text-gray-300 text-[10px] mt-1">{c.quantity}x {c.item.price.toFixed(2)}€</p>
+              </div>
+              <div className="flex items-center gap-4 shrink-0">
                 <span className="font-black text-base">{(c.item.price * c.quantity).toFixed(2)}€</span>
                 <button onClick={() => removeFromCart(c.item.id)} className="text-red-400 hover:text-red-600 transition-colors">
                   <Icons.Trash />
@@ -115,7 +122,7 @@ export default function OrderPage() {
             </div>
             <div className="flex justify-between">
               <span>{t.checkout.delivery}</span>
-              <span className="text-black">{DELIVERY_FEE.toFixed(2)}€</span>
+              <span className="text-black">{deliveryFee.toFixed(2)}€</span>
             </div>
             <div className="flex justify-between items-baseline pt-4 border-t border-gray-100 text-black">
               <span className="tracking-widest">{t.checkout.total}</span>

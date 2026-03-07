@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const orderNumber = generateOrderNumber();
 
   // Create order in DB with pending status first
-  const { data: order, error: orderError } = await supabase
+  const { data: order, error: orderError } = await supabase 
     .from('orders')
     .insert({
       order_number: orderNumber,

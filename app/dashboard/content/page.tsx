@@ -6,6 +6,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Icons } from '@/components/Icons';
 
 const DEFAULTS: Record<string, string> = {
+  delivery_fee: '2.90',
   hero_title: 'FRISCHES SUSHI.',
   hero_subtitle_de: 'Banana Sushi kombiniert traditionelle Handwerkskunst mit modernem Flair. Exklusiv als Lieferservice.',
   hero_subtitle_en: 'Banana Sushi combines traditional craftsmanship with modern flair. Delivery exclusive.',
@@ -231,16 +232,27 @@ export default function ContentPage() {
 
       {/* Contact Section */}
       <section className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-5">
-        <h3 className="text-sm font-black uppercase tracking-widest border-b border-gray-100 pb-4">Contact Info</h3>
+        <h3 className="text-sm font-black uppercase tracking-widest border-b border-gray-100 pb-4">Contact Info & Delivery</h3>
         <TextField label="Address" fieldKey="contact_address" value={form.contact_address} onChange={setField} />
         <TextField label="Opening Hours" fieldKey="contact_hours" value={form.contact_hours} onChange={setField} />
         <TextField label="Phone" fieldKey="contact_phone" value={form.contact_phone} onChange={setField} />
+        <div>
+          <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Delivery Fee (€)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.delivery_fee}
+            onChange={e => setField('delivery_fee', e.target.value)}
+            className="w-full mt-1 p-4 bg-gray-50 rounded-2xl border-none outline-none font-bold text-sm"
+          />
+        </div>
         <button
-          onClick={() => saveSection(['contact_address', 'contact_hours', 'contact_phone'], 'Contact')}
+          onClick={() => saveSection(['contact_address', 'contact_hours', 'contact_phone', 'delivery_fee'], 'Contact')}
           disabled={isSaving('Contact')}
           className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-yellow-500 hover:text-black transition-all disabled:opacity-50"
         >
-          {isSaving('Contact') ? 'Saving...' : 'Save Contact'}
+          {isSaving('Contact') ? 'Saving...' : 'Save Contact & Delivery'}
         </button>
       </section>
     </div>
