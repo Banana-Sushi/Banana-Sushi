@@ -96,7 +96,18 @@ export const translations = {
       revenueMonth: 'Umsatz Monat',
       totalOrders: 'Bestellungen',
       markComplete: 'Als abgeschlossen markieren',
-      newOrder: 'Neue Bestellung!'
+      newOrder: 'Neue Bestellung!',
+      staff: 'Personal',
+      staffMgmt: 'Personal',
+      addStaff: 'Mitarbeiter hinzufügen',
+      editStaff: 'Mitarbeiter bearbeiten',
+      staffName: 'Name',
+      staffEmail: 'E-Mail',
+      staffRole: 'Rolle',
+      staffPassword: 'Passwort',
+      staffPasswordHint: 'Leer lassen, um das Passwort nicht zu ändern',
+      deleteStaff: 'Mitarbeiter löschen',
+      confirmDelete: 'Wirklich löschen?'
     }
   },
   en: {
@@ -196,7 +207,18 @@ export const translations = {
       revenueMonth: 'Monthly Revenue',
       totalOrders: 'Total Orders',
       markComplete: 'Mark as Completed',
-      newOrder: 'New Order!'
+      newOrder: 'New Order!',
+      staff: 'Staff',
+      staffMgmt: 'Staff',
+      addStaff: 'Add Staff Member',
+      editStaff: 'Edit Staff Member',
+      staffName: 'Name',
+      staffEmail: 'Email',
+      staffRole: 'Role',
+      staffPassword: 'Password',
+      staffPasswordHint: 'Leave blank to keep current password',
+      deleteStaff: 'Delete Staff Member',
+      confirmDelete: 'Are you sure?'
     }
   }
 };

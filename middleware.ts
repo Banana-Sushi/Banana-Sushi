@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 
-const ADMIN_ONLY = ['/dashboard/stats', '/dashboard/menu'];
+const ADMIN_ONLY = ['/dashboard/stats', '/dashboard/menu', '/dashboard/content', '/dashboard/staff'];
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;

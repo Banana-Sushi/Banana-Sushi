@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const role = (user?.role ?? null) as 'admin' | 'staff' | null;
 
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-white overflow-x-hidden selection:bg-yellow-200`}>
         <AppProvider>
           <LangSync />
