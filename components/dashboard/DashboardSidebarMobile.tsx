@@ -14,6 +14,7 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
     { to: '/dashboard/history', label: t.dashboard.history, icon: <Icons.Cart />, adminOnly: false },
     { to: '/dashboard/stats', label: t.dashboard.stats, icon: <Icons.Stats />, adminOnly: true },
     { to: '/dashboard/menu', label: t.dashboard.menuMgmt, icon: <Icons.Edit />, adminOnly: true },
+    { to: '/dashboard/content', label: 'Content', icon: <Icons.Content />, adminOnly: true },
   ].filter(l => !l.adminOnly || role === 'admin');
 
   if (pathname === '/dashboard/login') return null;

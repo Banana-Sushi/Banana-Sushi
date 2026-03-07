@@ -6,14 +6,18 @@ import { MenuItem } from '@/types';
 
 export default async function HomePage() {
   const supabase = createServerSupabaseClient();
-  const { data } = await supabase
-    .from('menu_items')
-    .select('*')
-    .eq('is_available', true)
-    .eq('is_featured', true)
-    .limit(4);
 
-  const featuredItems: MenuItem[] = (data ?? []).map((item: any) => ({
+  const [menuRes, contentRes] = await Promise.all([
+    supabase
+      .from('menu_items')
+      .select('*')
+      .eq('is_available', true)
+      .eq('is_featured', true)
+      .limit(4),
+    supabase.from('site_content').select('key, value'),
+  ]);
+
+  const featuredItems: MenuItem[] = (menuRes.data ?? []).map((item: any) => ({
     id: item.id,
     name: { de: item.name_de, en: item.name_en },
     description: { de: item.description_de ?? '', en: item.description_en ?? '' },
@@ -24,5 +28,8 @@ export default async function HomePage() {
     isFeatured: item.is_featured,
   }));
 
-  return <HomePageClient featuredItems={featuredItems} />;
+  const content: Record<string, string> = {};
+  for (const row of contentRes.data ?? []) content[row.key] = row.value;
+
+  return <HomePageClient featuredItems={featuredItems} content={content} />;
 }
