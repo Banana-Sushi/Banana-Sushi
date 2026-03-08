@@ -165,7 +165,8 @@ export default function OrdersPage() {
   <style>
     @page { size: 80mm auto; margin: 4mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: "Courier New", Courier, monospace; font-size: 12px; color: #000; width: 72mm; }
+    html { height: auto; }
+    body { font-family: "Courier New", Courier, monospace; font-size: 12px; color: #000; width: 72mm; display: table; }
     .center { text-align: center; }
     .flex { display: flex; justify-content: space-between; }
     .dash { border-top: 1px dashed #000; margin: 8px 0; }
@@ -260,8 +261,8 @@ export default function OrdersPage() {
     win.document.write(html);
     win.document.close();
     win.focus();
+    win.addEventListener('afterprint', () => win.close());
     win.print();
-    win.close();
   }, [selectedOrder]);
 
   const filtered = useMemo(() => {
