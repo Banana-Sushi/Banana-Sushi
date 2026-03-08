@@ -13,7 +13,7 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online');
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', zip: '', city: '', note: '' });
-  const [deliveryFee, setDeliveryFee] = useState(2.90);
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/content')
@@ -22,11 +22,11 @@ export default function OrderPage() {
         const fee = parseFloat(data.delivery_fee);
         if (!isNaN(fee)) setDeliveryFee(fee);
       })
-      .catch(() => {});
+      .catch(() => setDeliveryFee(2.90));
   }, []);
 
   const subtotal = cart.reduce((acc, c) => acc + c.item.price * c.quantity, 0);
-  const total = subtotal + deliveryFee;
+  const total = subtotal + (deliveryFee ?? 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,11 +122,11 @@ export default function OrderPage() {
             </div>
             <div className="flex justify-between">
               <span>{t.checkout.delivery}</span>
-              <span className="text-black">{deliveryFee.toFixed(2)}€</span>
+              <span className="text-black">{deliveryFee !== null ? `${deliveryFee.toFixed(2)}€` : '...'}</span>
             </div>
             <div className="flex justify-between items-baseline pt-4 border-t border-gray-100 text-black">
               <span className="tracking-widest">{t.checkout.total}</span>
-              <span className="text-3xl text-black">{total.toFixed(2)}€</span>
+              <span className="text-3xl text-black">{deliveryFee !== null ? `${total.toFixed(2)}€` : '...'}</span>
             </div>
             <p className="text-gray-300 pt-1">{t.checkout.taxInfo}</p>
           </div>

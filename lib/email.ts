@@ -1,6 +1,4 @@
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
 import { Order } from '@/types';
 
 const transporter = nodemailer.createTransport({
@@ -26,7 +24,7 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     <body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
       <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
         <div style="background:#ffffff;padding:32px 40px;text-align:center;border-bottom:3px solid #fbbf24;">
-          <img src="cid:logo@bananasushi" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />
+          <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo.png" alt="Banana Sushi" style="height:52px;width:auto;display:block;margin:0 auto;" />
         </div>
         <div style="padding:40px;">
           <h2 style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;margin-bottom:8px;">
@@ -66,20 +64,10 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
     </html>
   `;
 
-  const logoPath = path.join(process.cwd(), 'public', 'logo.png');
-  const logoBuffer = fs.readFileSync(logoPath);
-
   await transporter.sendMail({
     from: `"Banana Sushi" <${process.env.GMAIL_USER}>`,
     to: customerEmail,
     subject: `Order confirmed — ${order.orderNumber} · Banana Sushi`,
     html,
-    attachments: [
-      {
-        filename: 'logo.png',
-        content: logoBuffer,
-        cid: 'logo@bananasushi',
-      },
-    ],
   });
 }

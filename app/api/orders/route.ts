@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { verifyToken } from '@/lib/auth';
-
-function generateOrderNumber() {
-  return `BNN-${Math.floor(1000 + Math.random() * 9000)}`;
-}
+import { generateOrderNumber } from '@/lib/order-number';
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get('auth_token')?.value;
@@ -26,7 +23,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const supabase = createServerSupabaseClient();
 
-  const orderNumber = generateOrderNumber();
+  const orderNumber = await generateOrderNumber(supabase);
 
   const { data, error } = await supabase
     .from('orders')

@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   title: 'Banana Sushi — Premium Sushi Delivery',
   description: 'Fresh sushi delivered to your door. Order online at Banana Sushi Berlin.',
   icons: {
+    icon: '/logo.png',
     apple: [{ url: '/logo.png', sizes: '512x512', type: 'image/png' }],
   },
   openGraph: {

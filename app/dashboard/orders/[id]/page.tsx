@@ -60,12 +60,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setUpdating(false);
   };
 
+  const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
   const handlePrint = () => {
     if (!order) return;
     const win = window.open('', '_blank', 'width=700,height=900');
     if (!win) return;
     win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Receipt ${order.orderNumber}</title>
+<html><head><meta charset="utf-8"><title>Receipt ${esc(order.orderNumber)}</title>
 <style>
   @page { margin: 15mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,18 +86,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   <div class="small">+49 (0) 30 123 456 78</div>
 </div>
 <div style="margin-bottom:12px">
-  <div style="font-weight:900">ORDER ${order.orderNumber}</div>
+  <div style="font-weight:900">ORDER ${esc(order.orderNumber)}</div>
   <div class="small">${new Date(order.createdAt).toLocaleDateString('de-DE')} ${new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>
 </div>
 <div class="dashed" style="margin-bottom:12px">
-  <div style="font-weight:900">${order.customerName}</div>
-  <div>${order.phone}</div>
-  <div>${order.address}</div>
-  <div>${order.zipCode} ${order.city}</div>
-  ${order.deliveryNote ? `<div style="margin-top:4px;font-style:italic">Note: ${order.deliveryNote}</div>` : ''}
+  <div style="font-weight:900">${esc(order.customerName)}</div>
+  <div>${esc(order.phone)}</div>
+  <div>${esc(order.address)}</div>
+  <div>${esc(order.zipCode)} ${esc(order.city)}</div>
+  ${order.deliveryNote ? `<div style="margin-top:4px;font-style:italic">Note: ${esc(order.deliveryNote)}</div>` : ''}
 </div>
 <div class="dashed" style="margin-bottom:0">
-  ${order.items.map(item => `<div class="row"><span>${item.quantity}x ${item.name}</span><span>${(item.price * item.quantity).toFixed(2)}€</span></div>`).join('')}
+  ${order.items.map(item => `<div class="row"><span>${item.quantity}x ${esc(item.name)}</span><span>${(item.price * item.quantity).toFixed(2)}€</span></div>`).join('')}
 </div>
 <div class="dashed">
   <div class="row small"><span>Subtotal</span><span>${order.subtotal.toFixed(2)}€</span></div>

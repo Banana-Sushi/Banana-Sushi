@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-
-function generateOrderNumber() {
-  return `BNN-${Math.floor(1000 + Math.random() * 9000)}`;
-}
+import { generateOrderNumber } from '@/lib/order-number';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 
   const supabase = createServerSupabaseClient();
-  const orderNumber = generateOrderNumber();
+  const orderNumber = await generateOrderNumber(supabase);
 
   // Create order in DB with pending status first
   const { data: order, error: orderError } = await supabase 
@@ -57,7 +54,7 @@ export async function POST(req: NextRequest) {
   });
 
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card', 'paypal', 'sepa_debit', 'klarna'],
+    payment_method_types: ['card', 'paypal', 'sepa_debit'],
     line_items: lineItems,
     mode: 'payment',
     success_url: `${baseUrl}/order/success`,
