@@ -44,8 +44,8 @@
     background: #fff;
   }
 
-  body > * {
-    display: none !important;
+  body * {
+    visibility: hidden !important;
   }
 
   .receipt-print {
@@ -56,5 +56,10 @@
     width: 72mm !important;
     margin: 0 !important;
     padding: 0 !important;
+    visibility: visible !important;
+  }
+
+  .receipt-print * {
+    visibility: visible !important;
   }
 }
