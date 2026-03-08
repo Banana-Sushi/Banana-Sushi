@@ -6,8 +6,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '../Icons';
 
-export const DashboardSidebar = ({ role }: { role?: 'admin' | 'staff' | null }) => {
+export const DashboardSidebar = ({ role, email }: { role?: 'admin' | 'staff' | null; email?: string | null }) => {
   const { t, lang, setLang } = useAppContext();
+  const displayName = email ? (email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + email.split('@')[0].split('.')[0].slice(1)) : 'User';
   const pathname = usePathname();
   const router = useRouter();
 
@@ -46,6 +47,14 @@ export const DashboardSidebar = ({ role }: { role?: 'admin' | 'staff' | null }) 
         ))}
       </div>
       <div className="flex flex-col items-center gap-6">
+        {/* User info */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-black text-[11px] font-black">
+            {displayName.charAt(0)}
+          </div>
+          <span className="text-[7px] font-black uppercase tracking-widest text-white leading-tight text-center">{displayName}</span>
+          <span className="text-[6px] font-black uppercase tracking-widest text-yellow-500">{role}</span>
+        </div>
         <button
           onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
           className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"

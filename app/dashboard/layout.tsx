@@ -8,11 +8,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const token = cookieStore.get('auth_token')?.value;
   const user = token ? await verifyToken(token) : null;
   const role = (user?.role ?? null) as 'admin' | 'staff' | null;
+  const email = user?.email ?? null;
 
   return (
     <div className="min-h-screen bg-gray-50 selection:bg-yellow-200">
-      <DashboardSidebar role={role} />
-      <DashboardSidebarMobile role={role} />
+      <DashboardSidebar role={role} email={email} />
+      <DashboardSidebarMobile role={role} email={email} />
       <div className="animate-fade-in">{children}</div>
     </div>
   );

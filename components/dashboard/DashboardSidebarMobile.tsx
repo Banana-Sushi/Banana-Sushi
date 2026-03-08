@@ -1,13 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '../Icons';
 
-export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | null }) => {
+export const DashboardSidebarMobile = ({ role, email }: { role?: 'admin' | 'staff' | null; email?: string | null }) => {
   const { t, lang, setLang } = useAppContext();
   const pathname = usePathname();
+  const router = useRouter();
+
+  const displayName = email ? (email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + email.split('@')[0].split('.')[0].slice(1)) : 'User';
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/dashboard/login');
+  };
 
   const links = [
     { to: '/dashboard/orders', label: t.dashboard.orders, icon: <Icons.Clock />, adminOnly: false },
@@ -34,6 +42,13 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
             <span className="text-[7px] font-black uppercase tracking-widest">{link.label}</span>
           </Link>
         ))}
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center gap-1 text-gray-300 hover:text-black transition-colors"
+        >
+          <Icons.LogOut />
+          <span className="text-[7px] font-black uppercase tracking-widest">{t.dashboard.logout}</span>
+        </button>
       </div>
 
       {/* Mobile lang toggle — top-right corner */}
@@ -43,6 +58,17 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
       >
         {lang === 'de' ? 'EN' : 'DE'}
       </button>
+
+      {/* Mobile user info — top-left corner */}
+      <div className="fixed top-4 left-4 lg:hidden z-50 bg-white border border-gray-200 shadow-sm rounded-full pl-1 pr-3 h-10 flex items-center gap-2 print:hidden">
+        <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center text-yellow-400 text-[10px] font-black shrink-0">
+          {displayName.charAt(0)}
+        </div>
+        <div className="leading-tight">
+          <p className="text-[8px] font-black uppercase tracking-widest text-black">{displayName}</p>
+          <p className="text-[7px] font-black uppercase tracking-widest text-yellow-500">{role}</p>
+        </div>
+      </div>
     </>
   );
 };
