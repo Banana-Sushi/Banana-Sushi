@@ -47,7 +47,7 @@ export default function HistoryPage() {
   }, [orders, filter]);
 
   return (
-    <div className="pt-[100px] px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
+    <div className="pt-8 px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
       <div className="flex flex-col md:flex-row justify-between items-baseline mb-12 gap-8">
         <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">
           History<span className="text-yellow-500">.</span>

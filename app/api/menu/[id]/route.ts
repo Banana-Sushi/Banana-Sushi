@@ -52,7 +52,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const supabase = createServerSupabaseClient();
+
+  // Fetch image URL before deleting
+  const { data: item } = await supabase.from('menu_items').select('image').eq('id', id).single();
+
   const { error } = await supabase.from('menu_items').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Delete from Supabase storage if image is from menu-images bucket
+  if (item?.image) {
+    const bucketBase = supabase.storage.from('menu-images').getPublicUrl('').data.publicUrl.replace(/\/$/, '');
+    if (item.image.startsWith(bucketBase)) {
+      const filePath = item.image.slice(bucketBase.length + 1);
+      await supabase.storage.from('menu-images').remove([filePath]);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

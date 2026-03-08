@@ -90,84 +90,105 @@ export default function StaffManagementPage() {
   };
 
   return (
-    <div className="lg:pl-24 min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-black">{t.dashboard.staffMgmt}</h1>
-            <p className="text-gray-500 text-sm mt-1">{members.length} member{members.length !== 1 ? 's' : ''}</p>
-          </div>
-          <button
-            onClick={openNew}
-            className="flex items-center gap-2 bg-black text-white text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-gray-900 transition-colors"
-          >
-            <Icons.Plus />
-            {t.dashboard.addStaff}
-          </button>
+    <div className="pt-8 px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-baseline mb-12 gap-6">
+        <div>
+          <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">
+            {t.dashboard.staffMgmt ?? 'Staff'}<span className="text-yellow-500">.</span>
+          </h2>
+          <p className="text-gray-400 font-black text-[11px] uppercase tracking-widest mt-2">
+            {members.length} member{members.length !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            {members.length === 0 ? (
-              <div className="text-center py-16 text-gray-400 font-medium">No staff members yet.</div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100 text-left text-xs font-black uppercase tracking-widest text-gray-400">
-                    <th className="px-6 py-4">{t.dashboard.staffName}</th>
-                    <th className="px-6 py-4">{t.dashboard.staffEmail}</th>
-                    <th className="px-6 py-4">{t.dashboard.staffRole}</th>
-                    <th className="px-6 py-4">{t.dashboard.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map(member => (
-                    <tr key={member.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-semibold">{member.name}</td>
-                      <td className="px-6 py-4 text-gray-600 text-sm">{member.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                          member.role === 'admin'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {member.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => openEdit(member)}
-                            className="text-gray-400 hover:text-black transition-colors"
-                            title="Edit"
-                          >
-                            <Icons.Edit />
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteId(member.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                            title="Delete"
-                          >
-                            <Icons.Trash />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
+        <button
+          onClick={openNew}
+          className="flex items-center gap-2 bg-black text-white text-[11px] font-black uppercase tracking-widest px-5 py-3 rounded-xl hover:bg-gray-900 transition-colors"
+        >
+          <Icons.Plus />
+          {t.dashboard.addStaff}
+        </button>
       </div>
+
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : members.length === 0 ? (
+        <p className="text-center py-12 text-gray-300 font-black uppercase tracking-widest text-sm">No staff members yet</p>
+      ) : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">{t.dashboard.staffName}</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">{t.dashboard.staffEmail}</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">{t.dashboard.staffRole}</th>
+                  <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">{t.dashboard.actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {members.map(member => (
+                  <tr key={member.id} className="hover:bg-gray-50/30 transition-colors">
+                    <td className="px-8 py-5 font-black text-sm">{member.name}</td>
+                    <td className="px-8 py-5 text-gray-500 text-sm">{member.email}</td>
+                    <td className="px-8 py-5">
+                      <span className={`inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                        member.role === 'admin' ? 'bg-yellow-50 text-yellow-600' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {member.role}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <button onClick={() => openEdit(member)} className="text-gray-300 hover:text-black transition-colors" title="Edit">
+                          <Icons.Edit />
+                        </button>
+                        <button onClick={() => setConfirmDeleteId(member.id)} className="text-gray-300 hover:text-red-500 transition-colors" title="Delete">
+                          <Icons.Trash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {members.map(member => (
+              <div key={member.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-black text-base truncate">{member.name}</p>
+                    <p className="text-gray-400 text-sm mt-0.5 truncate">{member.email}</p>
+                    <span className={`inline-block mt-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                      member.role === 'admin' ? 'bg-yellow-50 text-yellow-600' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {member.role}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0 pt-1">
+                    <button onClick={() => openEdit(member)} className="text-gray-300 hover:text-black transition-colors" title="Edit">
+                      <Icons.Edit />
+                    </button>
+                    <button onClick={() => setConfirmDeleteId(member.id)} className="text-gray-300 hover:text-red-500 transition-colors" title="Delete">
+                      <Icons.Trash />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-black">
@@ -186,7 +207,7 @@ export default function StaffManagementPage() {
                   type="text"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                   placeholder="Full name"
                 />
               </div>
@@ -198,7 +219,7 @@ export default function StaffManagementPage() {
                   type="email"
                   value={form.email}
                   onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                   placeholder="email@example.com"
                 />
               </div>
@@ -210,7 +231,7 @@ export default function StaffManagementPage() {
                   type="password"
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                   placeholder={editingId ? t.dashboard.staffPasswordHint : 'Password'}
                 />
                 {editingId && (
@@ -224,7 +245,7 @@ export default function StaffManagementPage() {
                 <select
                   value={form.role}
                   onChange={e => setForm(f => ({ ...f, role: e.target.value as 'admin' | 'staff' }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-white"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors bg-white"
                 >
                   <option value="staff">Staff</option>
                   <option value="admin">Admin</option>
@@ -234,14 +255,14 @@ export default function StaffManagementPage() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={closeModal}
-                className="flex-1 border border-gray-200 text-sm font-bold py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 border border-gray-200 text-sm font-bold py-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !form.name || !form.email || (!editingId && !form.password)}
-                className="flex-1 bg-black text-white text-sm font-bold py-2.5 rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-40"
+                className="flex-1 bg-black text-white text-sm font-bold py-3 rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-40"
               >
                 {saving ? 'Saving…' : 'Save'}
               </button>
@@ -252,20 +273,20 @@ export default function StaffManagementPage() {
 
       {/* Delete Confirmation Modal */}
       {confirmDeleteId && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-center">
             <h2 className="text-lg font-black mb-2">{t.dashboard.confirmDelete}</h2>
             <p className="text-gray-500 text-sm mb-6">This action cannot be undone.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDeleteId(null)}
-                className="flex-1 border border-gray-200 text-sm font-bold py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 border border-gray-200 text-sm font-bold py-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(confirmDeleteId)}
-                className="flex-1 bg-red-500 text-white text-sm font-bold py-2.5 rounded-xl hover:bg-red-600 transition-colors"
+                className="flex-1 bg-red-500 text-white text-sm font-bold py-3 rounded-xl hover:bg-red-600 transition-colors"
               >
                 Delete
               </button>

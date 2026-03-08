@@ -177,7 +177,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="pt-[100px] px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
+    <div className="pt-8 px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
       <div className="mb-10">
         <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">
           Live Orders<span className="text-yellow-500">.</span>

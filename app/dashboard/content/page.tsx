@@ -165,7 +165,7 @@ export default function ContentPage() {
 
   if (loading) {
     return (
-      <div className="pt-[100px] lg:pl-32 flex justify-center py-20">
+      <div className="pt-8 lg:pl-32 flex justify-center py-20">
         <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -174,7 +174,7 @@ export default function ContentPage() {
   const isSaving = (name: string) => saving === name;
 
   return (
-    <div className="pt-[100px] px-4 md:px-12 max-w-4xl mx-auto lg:pl-32 min-h-screen pb-32 space-y-12">
+    <div className="pt-8 px-4 md:px-12 max-w-4xl mx-auto lg:pl-32 min-h-screen pb-32 space-y-12">
       <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">
         Content<span className="text-yellow-500">.</span>
       </h2>

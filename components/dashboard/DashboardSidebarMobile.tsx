@@ -6,7 +6,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Icons } from '../Icons';
 
 export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | null }) => {
-  const { t } = useAppContext();
+  const { t, lang, setLang } = useAppContext();
   const pathname = usePathname();
 
   const links = [
@@ -32,6 +32,13 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
           <span className="text-[7px] font-black uppercase tracking-widest">{link.label}</span>
         </Link>
       ))}
+      <button
+        onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
+        className="flex flex-col items-center gap-1 text-gray-300 hover:text-black transition-colors"
+      >
+        <span className="text-[11px] font-black">{lang === 'de' ? 'EN' : 'DE'}</span>
+        <span className="text-[7px] font-black uppercase tracking-widest">Lang</span>
+      </button>
     </div>
   );
 };

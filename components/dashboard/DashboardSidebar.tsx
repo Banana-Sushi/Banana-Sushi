@@ -7,7 +7,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Icons } from '../Icons';
 
 export const DashboardSidebar = ({ role }: { role?: 'admin' | 'staff' | null }) => {
-  const { t } = useAppContext();
+  const { t, lang, setLang } = useAppContext();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -45,13 +45,21 @@ export const DashboardSidebar = ({ role }: { role?: 'admin' | 'staff' | null }) 
           </Link>
         ))}
       </div>
-      <button
-        onClick={handleLogout}
-        className="text-gray-600 hover:text-white transition-colors flex flex-col items-center gap-2"
-      >
-        <Icons.LogOut />
-        <span className="text-[7px] font-black uppercase tracking-widest">{t.dashboard.logout}</span>
-      </button>
+      <div className="flex flex-col items-center gap-6">
+        <button
+          onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
+          className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
+        >
+          {lang === 'de' ? 'EN' : 'DE'}
+        </button>
+        <button
+          onClick={handleLogout}
+          className="text-gray-600 hover:text-white transition-colors flex flex-col items-center gap-2"
+        >
+          <Icons.LogOut />
+          <span className="text-[7px] font-black uppercase tracking-widest">{t.dashboard.logout}</span>
+        </button>
+      </div>
     </aside>
   );
 };

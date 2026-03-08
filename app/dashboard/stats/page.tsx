@@ -92,7 +92,7 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <div className="pt-[100px] px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32 flex justify-center items-start pt-40">
+      <div className="pt-8 px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32 flex justify-center items-start">
         <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -101,7 +101,7 @@ export default function StatsPage() {
   const onlinePct = stats.ordersTotal > 0 ? Math.round((stats.onlineCount / stats.ordersTotal) * 100) : 0;
 
   return (
-    <div className="pt-[100px] px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
+    <div className="pt-8 px-4 md:px-12 max-w-7xl mx-auto lg:pl-32 min-h-screen pb-32">
       <h2 className="text-4xl md:text-6xl font-black uppercase mb-12 tracking-tighter">
         Statistics<span className="text-yellow-500">.</span>
       </h2>
