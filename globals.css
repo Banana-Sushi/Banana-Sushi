@@ -30,11 +30,6 @@
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 @media print {
-  @page { size: 80mm auto; margin: 4mm; }
-  .receipt-print {
-    display: block !important;
-    background: white !important;
-  }
   .print\:hidden { display: none !important; }
   .print\:block { display: block !important; }
 }

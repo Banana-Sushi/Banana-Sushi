@@ -21,24 +21,28 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
   if (pathname === '/dashboard/login') return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-gray-100 z-50 flex justify-around py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] print:hidden">
-      {links.map(link => (
-        <Link
-          key={link.to}
-          href={link.to}
-          className={`flex flex-col items-center gap-1 ${pathname === link.to ? 'text-black' : 'text-gray-300'}`}
-        >
-          {link.icon}
-          <span className="text-[7px] font-black uppercase tracking-widest">{link.label}</span>
-        </Link>
-      ))}
+    <>
+      {/* Mobile bottom nav */}
+      <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-gray-100 z-50 flex justify-around py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] print:hidden">
+        {links.map(link => (
+          <Link
+            key={link.to}
+            href={link.to}
+            className={`flex flex-col items-center gap-1 ${pathname === link.to ? 'text-black' : 'text-gray-300'}`}
+          >
+            {link.icon}
+            <span className="text-[7px] font-black uppercase tracking-widest">{link.label}</span>
+          </Link>
+        ))}
+      </div>
+
+      {/* Mobile lang toggle — top-right corner */}
       <button
         onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
-        className="flex flex-col items-center gap-1 text-gray-300 hover:text-black transition-colors"
+        className="fixed top-4 right-4 lg:hidden z-50 bg-white border border-gray-200 shadow-sm rounded-full w-10 h-10 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors print:hidden"
       >
-        <span className="text-[11px] font-black">{lang === 'de' ? 'EN' : 'DE'}</span>
-        <span className="text-[7px] font-black uppercase tracking-widest">Lang</span>
+        {lang === 'de' ? 'EN' : 'DE'}
       </button>
-    </div>
+    </>
   );
 };
