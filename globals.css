@@ -29,37 +29,3 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-@media print {
-  @page {
-    size: 80mm auto;
-    margin: 4mm 4mm;
-  }
-
-  html, body {
-    width: 80mm;
-    height: 0 !important;
-    overflow: hidden !important;
-    margin: 0;
-    padding: 0;
-    background: #fff;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  .receipt-print {
-    display: block !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 72mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    visibility: visible !important;
-  }
-
-  .receipt-print * {
-    visibility: visible !important;
-  }
-}

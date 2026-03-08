@@ -131,7 +131,9 @@ export default function OrdersPage() {
   }, []);
 
   const handlePrint = useCallback(() => {
-    if (selectedOrder && !selectedOrder.acknowledgedAt) {
+    if (!selectedOrder) return;
+
+    if (!selectedOrder.acknowledgedAt) {
       const now = new Date().toISOString();
       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, acknowledgedAt: now } : o));
       setSelectedOrder(prev => prev ? { ...prev, acknowledgedAt: now } : prev);
@@ -141,7 +143,125 @@ export default function OrdersPage() {
         body: JSON.stringify({ acknowledged_at: now }),
       });
     }
-    window.print();
+
+    const date = new Date(selectedOrder.createdAt);
+    const dateStr = date.toLocaleDateString('de-DE');
+    const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+    const itemsHtml = selectedOrder.items.map((item: any) => `
+      <div style="margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="flex:1;padding-right:8px;">${item.name}</span>
+          <span>${(item.price * item.quantity).toFixed(2)} EUR</span>
+        </div>
+        <div style="font-size:10px;color:#444;">${item.quantity} x ${item.price.toFixed(2)} EUR</div>
+      </div>
+    `).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    @page { size: 80mm auto; margin: 4mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Courier New", Courier, monospace; font-size: 12px; color: #000; width: 72mm; }
+    .center { text-align: center; }
+    .flex { display: flex; justify-content: space-between; }
+    .dash { border-top: 1px dashed #000; margin: 8px 0; }
+    .solid { border-top: 1px solid #000; margin: 4px 0; }
+    .bold { font-weight: 700; }
+    .heavy { font-weight: 900; }
+    .sm { font-size: 10px; }
+    .lg { font-size: 15px; }
+    .xl { font-size: 22px; letter-spacing: 3px; }
+  </style>
+</head>
+<body>
+  <div class="center" style="padding-bottom:10px;">
+    <div class="xl heavy">BANANA SUSHI</div>
+    <div class="sm" style="margin-top:2px;">· · · · · · · · · · · · · · · · · · · ·</div>
+    <div class="sm" style="margin-top:4px;">Sushi-Allee 42, 10115 Berlin</div>
+    <div class="sm">Tel: +49 (0) 30 123 456 78</div>
+    <div class="sm">www.bananasushi.de</div>
+  </div>
+
+  <div class="dash"></div>
+
+  <div style="margin-bottom:8px;">
+    <div class="flex bold">
+      <span>ORDER #</span><span>${selectedOrder.orderNumber}</span>
+    </div>
+    <div class="flex sm" style="margin-top:2px;">
+      <span>${dateStr}</span><span>${timeStr}</span>
+    </div>
+  </div>
+
+  <div class="dash"></div>
+
+  <div style="margin-bottom:8px;font-size:11px;">
+    <div class="sm bold" style="letter-spacing:1px;margin-bottom:3px;">DELIVER TO:</div>
+    <div class="bold">${selectedOrder.customerName}</div>
+    <div>${selectedOrder.phone}</div>
+    <div>${selectedOrder.address}</div>
+    <div>${selectedOrder.zipCode} ${selectedOrder.city}</div>
+    ${selectedOrder.deliveryNote ? `<div style="margin-top:4px;font-size:10px;font-style:italic;">Note: ${selectedOrder.deliveryNote}</div>` : ''}
+  </div>
+
+  <div class="dash"></div>
+
+  <div class="flex sm bold" style="letter-spacing:1px;margin-bottom:4px;">
+    <span>ITEM</span><span>TOTAL</span>
+  </div>
+
+  <div style="margin-bottom:8px;">${itemsHtml}</div>
+
+  <div class="dash"></div>
+
+  <div style="margin-bottom:8px;">
+    <div class="flex" style="font-size:11px;margin-bottom:2px;">
+      <span>Subtotal</span><span>${selectedOrder.subtotal.toFixed(2)} EUR</span>
+    </div>
+    <div class="flex" style="font-size:11px;margin-bottom:4px;">
+      <span>Delivery Fee</span><span>${selectedOrder.deliveryFee.toFixed(2)} EUR</span>
+    </div>
+    <div class="solid"></div>
+    <div class="flex heavy lg">
+      <span>TOTAL</span><span>${selectedOrder.total.toFixed(2)} EUR</span>
+    </div>
+  </div>
+
+  <div class="dash"></div>
+
+  <div style="margin-bottom:10px;font-size:11px;">
+    <div class="flex">
+      <span class="bold">PAYMENT</span>
+      <span>${selectedOrder.paymentMethod === 'online' ? 'Online (Paid)' : 'Cash on Delivery'}</span>
+    </div>
+    ${selectedOrder.paymentMethod === 'online' ? `
+    <div class="flex sm" style="margin-top:2px;">
+      <span>Status</span><span class="bold">PAID ✓</span>
+    </div>` : ''}
+  </div>
+
+  <div class="dash"></div>
+
+  <div class="center sm" style="line-height:1.6;">
+    <div>Vielen Dank für Ihre Bestellung!</div>
+    <div>Thank you for your order!</div>
+    <div style="margin-top:6px;letter-spacing:1px;">* * * * * * * * * * * * * * * *</div>
+    <div style="margin-top:4px;font-size:9px;color:#555;">${selectedOrder.orderNumber} — ${dateStr}</div>
+  </div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=400,height=600');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+    win.close();
   }, [selectedOrder]);
 
   const filtered = useMemo(() => {
@@ -363,8 +483,8 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Receipt — only visible on print */}
-      {selectedOrder && (
+      {/* Receipt — rendered into popup window on print */}
+      {false && selectedOrder && (
         <div className="receipt-print" style={{ display: 'none' }}>
           <div style={{ fontFamily: '"Courier New", Courier, monospace', fontSize: '12px', color: '#000', width: '72mm', padding: '0' }}>
 
