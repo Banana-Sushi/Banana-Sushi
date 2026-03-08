@@ -37,19 +37,15 @@
 
   html, body {
     width: 80mm;
-    height: auto;
+    height: 0 !important;
+    overflow: hidden !important;
     margin: 0;
     padding: 0;
     background: #fff;
   }
 
-  body * {
-    visibility: hidden !important;
-  }
-
-  .receipt-print,
-  .receipt-print * {
-    visibility: visible !important;
+  body > * {
+    display: none !important;
   }
 
   .receipt-print {
@@ -60,7 +56,5 @@
     width: 72mm !important;
     margin: 0 !important;
     padding: 0 !important;
-    page-break-inside: avoid;
-    break-inside: avoid;
   }
 }
