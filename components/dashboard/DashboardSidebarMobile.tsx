@@ -5,12 +5,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '../Icons';
 
-export const DashboardSidebarMobile = ({ role, email }: { role?: 'admin' | 'staff' | null; email?: string | null }) => {
+export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | null }) => {
   const { t, lang, setLang } = useAppContext();
   const pathname = usePathname();
   const router = useRouter();
-
-  const displayName = email ? (email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + email.split('@')[0].split('.')[0].slice(1)) : 'User';
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -59,16 +57,6 @@ export const DashboardSidebarMobile = ({ role, email }: { role?: 'admin' | 'staf
         {lang === 'de' ? 'EN' : 'DE'}
       </button>
 
-      {/* User info chip — top-left */}
-      <div className="fixed top-4 left-4 lg:hidden z-50 bg-black rounded-full pl-1 pr-3 h-10 flex items-center gap-2 shadow-sm print:hidden">
-        <div className="w-7 h-7 rounded-full bg-yellow-400 flex items-center justify-center text-black text-[10px] font-black shrink-0">
-          {displayName.charAt(0)}
-        </div>
-        <div className="leading-tight">
-          <p className="text-[8px] font-black uppercase tracking-widest text-white">{displayName}</p>
-          <p className="text-[7px] font-black uppercase tracking-widest text-yellow-400">{role}</p>
-        </div>
-      </div>
     </>
   );
 };
