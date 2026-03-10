@@ -98,7 +98,7 @@ export const Footer = () => {
         {/* Bottom bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">
-            © {new Date().getFullYear()} Banana Sushi · {t.footer.rights}
+            © {new Date().getFullYear()} Banana Sushiiiiiii · {t.footer.rights}
           </p>
         </div>
       </div>
