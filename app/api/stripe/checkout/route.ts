@@ -53,19 +53,24 @@ export async function POST(req: NextRequest) {
     quantity: 1,
   });
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card', 'paypal', 'sepa_debit'],
-    line_items: lineItems,
-    mode: 'payment',
-    success_url: `${baseUrl}/order/success`,
-    cancel_url: `${baseUrl}/order/cancel`,
-    metadata: {
-      orderId: order.id,
-      orderNumber,
-      customerEmail: body.email ?? '',
-    },
-    customer_email: body.email || undefined,
-  });
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card', 'paypal', 'sepa_debit'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `${baseUrl}/order/success`,
+      cancel_url: `${baseUrl}/order/cancel`,
+      metadata: {
+        orderId: order.id,
+        orderNumber,
+        customerEmail: body.email ?? '',
+      },
+      customer_email: body.email || undefined,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message ?? 'Stripe error' }, { status: 500 });
+  }
 
   // Save session ID to order
   await supabase

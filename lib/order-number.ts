@@ -7,7 +7,7 @@ export async function generateOrderNumber(supabase: SupabaseClient): Promise<str
     .like('order_number', 'BNN-%')
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   let next = 1000;
   if (data?.order_number) {

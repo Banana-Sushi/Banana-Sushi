@@ -9,6 +9,7 @@ interface CartItem {
   quantity: number;
 }
 
+
 interface Toast {
   id: number;
   msg: string;

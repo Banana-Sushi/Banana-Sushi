@@ -31,42 +31,42 @@ export const DashboardSidebarMobile = ({ role, email }: { role?: 'admin' | 'staf
   return (
     <>
       {/* Mobile bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-gray-100 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] print:hidden">
-        {/* User info strip */}
-        <div className="flex items-center justify-between px-5 pt-2 pb-1 border-b border-gray-50">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center text-yellow-400 text-[8px] font-black shrink-0">
-              {displayName.charAt(0)}
-            </div>
-            <span className="text-[8px] font-black uppercase tracking-widest text-black">{displayName}</span>
-            <span className="text-[7px] font-black uppercase tracking-widest text-yellow-500">{role}</span>
-          </div>
-          <button
-            onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
-            className="text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors"
+      <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-gray-100 z-50 flex justify-around py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] print:hidden">
+        {links.map(link => (
+          <Link
+            key={link.to}
+            href={link.to}
+            className={`flex flex-col items-center gap-1 ${pathname === link.to ? 'text-black' : 'text-gray-300'}`}
           >
-            {lang === 'de' ? 'EN' : 'DE'}
-          </button>
+            {link.icon}
+            <span className="text-[7px] font-black uppercase tracking-widest">{link.label}</span>
+          </Link>
+        ))}
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center gap-1 text-gray-300 hover:text-black transition-colors"
+        >
+          <Icons.LogOut />
+          <span className="text-[7px] font-black uppercase tracking-widest">{t.dashboard.logout}</span>
+        </button>
+      </div>
+
+      {/* EN/DE toggle — top-right (original position) */}
+      <button
+        onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
+        className="fixed top-4 right-4 lg:hidden z-50 bg-white border border-gray-200 shadow-sm rounded-full w-10 h-10 flex items-center justify-center text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors print:hidden"
+      >
+        {lang === 'de' ? 'EN' : 'DE'}
+      </button>
+
+      {/* User info chip — top-left */}
+      <div className="fixed top-4 left-4 lg:hidden z-50 bg-black rounded-full pl-1 pr-3 h-10 flex items-center gap-2 shadow-sm print:hidden">
+        <div className="w-7 h-7 rounded-full bg-yellow-400 flex items-center justify-center text-black text-[10px] font-black shrink-0">
+          {displayName.charAt(0)}
         </div>
-        {/* Nav links */}
-        <div className="flex justify-around py-3">
-          {links.map(link => (
-            <Link
-              key={link.to}
-              href={link.to}
-              className={`flex flex-col items-center gap-1 ${pathname === link.to ? 'text-black' : 'text-gray-300'}`}
-            >
-              {link.icon}
-              <span className="text-[7px] font-black uppercase tracking-widest">{link.label}</span>
-            </Link>
-          ))}
-          <button
-            onClick={handleLogout}
-            className="flex flex-col items-center gap-1 text-gray-300 hover:text-black transition-colors"
-          >
-            <Icons.LogOut />
-            <span className="text-[7px] font-black uppercase tracking-widest">{t.dashboard.logout}</span>
-          </button>
+        <div className="leading-tight">
+          <p className="text-[8px] font-black uppercase tracking-widest text-white">{displayName}</p>
+          <p className="text-[7px] font-black uppercase tracking-widest text-yellow-400">{role}</p>
         </div>
       </div>
     </>
