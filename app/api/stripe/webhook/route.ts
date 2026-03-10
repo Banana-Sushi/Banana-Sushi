@@ -6,11 +6,16 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
 
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: 'STRIPE_WEBHOOK_SECRET not set' }, { status: 400 });
+  }
+
   let event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripe.webhooks.constructEvent(body, sig, secret);
   } catch (err: any) {
-    return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
+    return NextResponse.json({ error: `Webhook error: ${err.message}`, secretPrefix: secret.slice(0, 10) }, { status: 400 });
   }
 
   if (event.type === 'checkout.session.completed') {
