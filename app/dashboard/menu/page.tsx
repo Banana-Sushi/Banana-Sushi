@@ -23,7 +23,7 @@ const EMPTY_FORM: Omit<RawMenuItem, 'id'> = {
   price: '' as any, category: 'Sushi', image: '', is_available: true, is_featured: false,
 };
 
-const CATEGORIES = ['Sushi', 'Bowls', 'Drinks', 'Starters', 'Desserts'];
+const CATEGORIES = ['Sushi Platten', 'Sushi Burger', 'Vorspeisen', 'Warme Suppen', 'Poke Bowl', 'Sommerrollen', 'Wok-Gerichte', 'Glasnudelsalat', 'Makis', 'Temaki', 'Nigiri', 'Inside Out Rolls', 'Inside Out Rolls (vegetarisch)', 'Spezial Rolls', 'Sashimi', 'Golden Rolls', 'Mini Golden Rolls', 'Desserts', 'Extras & Beilagen', 'Drinks'];
 
 export default function MenuManagementPage() {
   const { t, lang, addToast } = useAppContext();
