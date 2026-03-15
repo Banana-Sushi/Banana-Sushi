@@ -234,7 +234,7 @@ export default function ContentPage() {
       <section className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-5">
         <h3 className="text-sm font-black uppercase tracking-widest border-b border-gray-100 pb-4">Contact Info & Delivery</h3>
         <TextField label="Address" fieldKey="contact_address" value={form.contact_address} onChange={setField} />
-        <TextField label="Opening Hours" fieldKey="contact_hours" value={form.contact_hours} onChange={setField} />
+        <TextField label="Opening Hours (one line per entry)" fieldKey="contact_hours" value={form.contact_hours} onChange={setField} multiline />
         <TextField label="Phone" fieldKey="contact_phone" value={form.contact_phone} onChange={setField} />
         <div>
           <label className="text-[9px] font-black uppercase text-gray-400 ml-1">Delivery Fee (€)</label>

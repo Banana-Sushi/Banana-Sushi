@@ -178,7 +178,7 @@ export const HomePageClient = ({
               </div>
               <div>
                 <p className="text-gray-300 mb-2">{t.home.openingHours}</p>
-                <p className="text-lg md:text-xl text-black">{c(content, 'contact_hours')}</p>
+                <p className="text-lg md:text-xl text-black whitespace-pre-line">{c(content, 'contact_hours')}</p>
               </div>
               <div>
                 <p className="text-gray-300 mb-2">Phone</p>

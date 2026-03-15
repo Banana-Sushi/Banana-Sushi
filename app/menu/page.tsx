@@ -19,6 +19,10 @@ export default async function MenuPage() {
     image: item.image ?? '',
     available: item.is_available,
     isFeatured: item.is_featured,
+    addonsOptional: item.addons_optional ?? [],
+    addonsMandatory: item.addons_mandatory ?? [],
+    discountType: item.discount_type ?? null,
+    discountValue: item.discount_value != null ? Number(item.discount_value) : null,
   }));
 
   return <MenuPageClient items={items} />;
