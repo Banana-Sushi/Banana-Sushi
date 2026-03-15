@@ -34,6 +34,10 @@ export async function POST(req: NextRequest) {
       image: body.image ?? '',
       is_available: body.is_available ?? true,
       is_featured: body.is_featured ?? false,
+      addons_optional: body.addons_optional ?? [],
+      addons_mandatory: body.addons_mandatory ?? [],
+      discount_type: body.discount_type || null,
+      discount_value: body.discount_value ?? null,
     })
     .select()
     .single();

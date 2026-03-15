@@ -25,7 +25,7 @@ export default function OrderPage() {
       .catch(() => setDeliveryFee(2.90));
   }, []);
 
-  const subtotal = cart.reduce((acc, c) => acc + c.item.price * c.quantity, 0);
+  const subtotal = cart.reduce((acc, c) => acc + c.effectivePrice * c.quantity, 0);
   const total = subtotal + (deliveryFee ?? 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +46,9 @@ export default function OrderPage() {
         menuItemId: c.item.id,
         name: c.item.name[lang],
         quantity: c.quantity,
-        price: c.item.price,
+        price: c.effectivePrice,
+        selectedOptionalAddons: c.selectedOptionalAddons,
+        selectedMandatoryAddons: c.selectedMandatoryAddons,
       })),
       subtotal,
       deliveryFee: deliveryFee,
@@ -93,47 +95,75 @@ export default function OrderPage() {
   }
 
   return (
-    <div className="pt-[100px] md:pt-[130px] px-4 md:px-20 pb-32 max-w-7xl mx-auto animate-fade-in">
+    <div className="pt-[100px] md:pt-[130px] px-4 md:px-6 pb-32 max-w-screen-2xl mx-auto animate-fade-in">
       <h2 className="text-4xl md:text-5xl font-black uppercase mb-16 tracking-tighter">{t.checkout.title}</h2>
-      <div className="flex flex-col lg:flex-row gap-16">
+      <div className="flex flex-col xl:flex-row gap-10">
         {/* Cart summary */}
-        <div className="flex-1 space-y-8 bg-white p-8 md:p-12 rounded-[2.5rem] border border-gray-100 shadow-sm">
-          {cart.map(c => (
-            <div key={c.item.id} className="flex items-center gap-4 py-6 border-b border-gray-50 last:border-0">
-              <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0">
-                <Image src={c.item.image} alt={c.item.name[lang]} fill className="object-cover" sizes="64px" />
-              </div>
-              <div className="font-black uppercase flex-1 min-w-0">
-                <p className="text-sm truncate">{c.item.name[lang]}</p>
-                <p className="text-gray-300 text-[10px] mt-1">{c.quantity}x {c.item.price.toFixed(2)}€</p>
-              </div>
-              <div className="flex items-center gap-4 shrink-0">
-                <span className="font-black text-base">{(c.item.price * c.quantity).toFixed(2)}€</span>
-                <button onClick={() => removeFromCart(c.item.id)} className="text-red-400 hover:text-red-600 transition-colors">
-                  <Icons.Trash />
-                </button>
-              </div>
-            </div>
-          ))}
-          <div className="pt-4 space-y-2 text-[10px] font-black uppercase text-gray-400">
-            <div className="flex justify-between">
+        <div className="flex-1 min-w-0 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-8 md:p-10 space-y-0 divide-y divide-gray-50">
+            {cart.map(c => {
+              const allAddons = [
+                ...(c.selectedMandatoryAddons ?? []),
+                ...(c.selectedOptionalAddons ?? []),
+              ];
+              const basePrice = c.effectivePrice - allAddons.reduce((s, a) => s + a.price, 0);
+              const lineTotal = c.effectivePrice * c.quantity;
+              return (
+                <div key={c.cartKey} className="py-6">
+                  <div className="flex gap-4">
+                    <div className="relative w-20 h-20 rounded-2xl overflow-hidden shrink-0">
+                      <Image src={c.item.image} alt={c.item.name[lang]} fill className="object-cover" sizes="80px" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="font-black uppercase text-sm leading-tight">{c.item.name[lang]}</h4>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="font-black text-base">{lineTotal.toFixed(2)}€</span>
+                          <button onClick={() => removeFromCart(c.cartKey)} className="text-red-300 hover:text-red-500 transition-colors">
+                            <Icons.Trash />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase">
+                          <span>{c.quantity}× base</span>
+                          <span>{(basePrice * c.quantity).toFixed(2)}€</span>
+                        </div>
+                        {allAddons.map((a, i) => (
+                          <div key={i} className="flex justify-between text-[10px] font-bold text-gray-300 uppercase">
+                            <span className="flex items-center gap-1">
+                              <span className="w-1 h-1 rounded-full bg-gray-200 shrink-0" />
+                              {a.name}
+                            </span>
+                            <span>{a.price > 0 ? `+${(a.price * c.quantity).toFixed(2)}€` : (lang === 'de' ? 'Gratis' : 'Free')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t border-gray-100 px-8 md:px-10 py-6 space-y-3 bg-gray-50/50">
+            <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
               <span>{t.checkout.subtotal}</span>
               <span className="text-black">{subtotal.toFixed(2)}€</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
               <span>{t.checkout.delivery}</span>
               <span className="text-black">{deliveryFee !== null ? `${deliveryFee.toFixed(2)}€` : '...'}</span>
             </div>
-            <div className="flex justify-between items-baseline pt-4 border-t border-gray-100 text-black">
-              <span className="tracking-widest">{t.checkout.total}</span>
-              <span className="text-3xl text-black">{deliveryFee !== null ? `${total.toFixed(2)}€` : '...'}</span>
+            <div className="flex justify-between items-baseline pt-3 border-t border-gray-200 text-black">
+              <span className="font-black uppercase tracking-widest text-[10px]">{t.checkout.total}</span>
+              <span className="text-3xl font-black">{deliveryFee !== null ? `${total.toFixed(2)}€` : '...'}</span>
             </div>
-            <p className="text-gray-300 pt-1">{t.checkout.taxInfo}</p>
+            <p className="text-[9px] text-gray-300 font-bold uppercase pt-1">{t.checkout.taxInfo}</p>
           </div>
         </div>
 
         {/* Order form */}
-        <form onSubmit={handleSubmit} className="w-full lg:w-[420px] space-y-5 bg-gray-50 p-8 md:p-10 rounded-[2.5rem]">
+        <form onSubmit={handleSubmit} className="w-full xl:w-[400px] shrink-0 space-y-5 bg-gray-50 p-8 md:p-10 rounded-[2.5rem]">
           <input
             required
             placeholder={t.checkout.name}

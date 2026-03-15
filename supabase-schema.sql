@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS menu_items (
   image            TEXT        DEFAULT '',
   is_available     BOOLEAN     DEFAULT true,
   is_featured      BOOLEAN     DEFAULT false,
+  addons_optional  JSONB       DEFAULT '[]',
+  addons_mandatory JSONB       DEFAULT '[]',
+  discount_type    TEXT        CHECK (discount_type IN ('percentage','fixed')),
+  discount_value   DECIMAL(10,2),
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -49,7 +53,14 @@ CREATE TABLE IF NOT EXISTS staff_users (
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Enable Realtime for orders (so dashboard gets live updates)
+-- 4. Add-ons and Discount columns for menu_items
+--    Run these if upgrading an existing database:
+-- ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS addons_optional JSONB DEFAULT '[]';
+-- ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS addons_mandatory JSONB DEFAULT '[]';
+-- ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS discount_type TEXT CHECK (discount_type IN ('percentage','fixed'));
+-- ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10,2);
+
+-- 5. Enable Realtime for orders (so dashboard gets live updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE orders;
 
 -- ============================================================

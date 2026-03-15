@@ -36,6 +36,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       image: body.image,
       is_available: body.is_available,
       is_featured: body.is_featured,
+      addons_optional: body.addons_optional ?? [],
+      addons_mandatory: body.addons_mandatory ?? [],
+      discount_type: body.discount_type || null,
+      discount_value: body.discount_value ?? null,
     })
     .eq('id', id)
     .select()

@@ -335,7 +335,7 @@ export default function OrdersPage() {
           <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 gap-6">
           {filtered.map(order => (
             <button
               key={order.id}
@@ -358,15 +358,32 @@ export default function OrdersPage() {
                 )}
               </div>
               <h3 className="text-xl font-black uppercase mb-3 truncate">{order.customerName}</h3>
-              <ul className="mb-5 space-y-0.5">
-                {order.items.slice(0, 3).map((item: any, i: number) => (
-                  <li key={i} className="text-[11px] font-bold text-gray-400 uppercase truncate">
-                    {item.quantity}× {item.name}
-                  </li>
-                ))}
-                {order.items.length > 3 && (
-                  <li className="text-[10px] font-black text-gray-300 uppercase">+{order.items.length - 3} more</li>
-                )}
+              <ul className="mb-5 space-y-2">
+                {order.items.map((item: any, i: number) => {
+                  const addons = [
+                    ...((item.selectedMandatoryAddons ?? []) as any[]),
+                    ...((item.selectedOptionalAddons ?? []) as any[]),
+                  ];
+                  const addonTotal = addons.reduce((s: number, a: any) => s + (a.price ?? 0), 0);
+                  const itemTotal = (item.price + addonTotal) * item.quantity;
+                  return (
+                    <li key={i}>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-[11px] font-black text-gray-700 uppercase">{item.quantity}× {item.name}</span>
+                        <span className="text-[11px] font-black text-black ml-2 shrink-0">{itemTotal.toFixed(2)}€</span>
+                      </div>
+                      <ul className="ml-4 mt-0.5 space-y-0.5">
+                        <li className="text-[9px] font-bold text-gray-300 uppercase">{item.price.toFixed(2)}€ base</li>
+                        {addons.map((a: any, j: number) => (
+                          <li key={j} className="text-[9px] font-bold text-gray-300 uppercase flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-gray-200 shrink-0" />
+                            {a.name}{a.price > 0 && <span> +{a.price.toFixed(2)}€</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  );
+                })}
               </ul>
               <div className="flex justify-between items-center">
                 <OrderStatusPill order={order} />
@@ -436,13 +453,34 @@ export default function OrdersPage() {
               </div>
 
               {/* Items */}
-              <div className="border-t border-gray-100 pt-6 space-y-3 mb-6">
-                {selectedOrder.items.map((item: any, i: number) => (
-                  <div key={i} className="flex justify-between font-bold text-sm uppercase">
-                    <span>{item.quantity}× {item.name}</span>
-                    <span className="font-black">{(item.price * item.quantity).toFixed(2)}€</span>
-                  </div>
-                ))}
+              <div className="border-t border-gray-100 pt-6 space-y-4 mb-6">
+                {selectedOrder.items.map((item: any, i: number) => {
+                  const addons = [
+                    ...((item.selectedMandatoryAddons ?? []) as any[]),
+                    ...((item.selectedOptionalAddons ?? []) as any[]),
+                  ];
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between font-black text-sm uppercase">
+                        <span>{item.quantity}× {item.name}</span>
+                        <span>{(item.price * item.quantity).toFixed(2)}€</span>
+                      </div>
+                      {addons.length > 0 && (
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          {addons.map((a: any, j: number) => (
+                            <li key={j} className="flex justify-between text-[10px] font-bold text-gray-400 uppercase">
+                              <span className="flex items-center gap-1">
+                                <span className="w-1 h-1 rounded-full bg-gray-300 shrink-0" />
+                                {a.name}
+                              </span>
+                              {a.price > 0 && <span>+{a.price.toFixed(2)}€</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Totals */}
