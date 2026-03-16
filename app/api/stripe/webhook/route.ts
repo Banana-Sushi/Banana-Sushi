@@ -13,8 +13,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
   }
 
-  if (event.type === 'checkout.session.completed') {
+  const isCompleted = event.type === 'checkout.session.completed';
+  const isAsyncPaid = event.type === 'checkout.session.async_payment_succeeded';
+
+  if (isCompleted || isAsyncPaid) {
     const session = event.data.object as any;
+
+    // For card payments: completed + paid immediately
+    // For SEPA: completed fires with payment_status='unpaid', then async_payment_succeeded fires when cleared
+    if (isCompleted && session.payment_status !== 'paid') {
+      return NextResponse.json({ received: true });
+    }
+
     const orderId = session.metadata?.orderId;
     const customerEmail = session.metadata?.customerEmail || session.customer_details?.email;
 
