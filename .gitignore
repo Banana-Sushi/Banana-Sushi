@@ -26,3 +26,7 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Client sensitive files
+"Banana Sushi socials.txt"
+Banana Sushi socials.txt
