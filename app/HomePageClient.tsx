@@ -11,12 +11,12 @@ import { MenuItem } from '@/types';
 
 const DEFAULTS = {
   hero_title: 'FRISCHES SUSHI.',
-  hero_subtitle_de: 'Banana Sushi kombiniert traditionelle Handwerkskunst mit modernem Flair. Exklusiv als Lieferservice.',
-  hero_subtitle_en: 'Banana Sushi combines traditional craftsmanship with modern flair. Delivery exclusive.',
+  hero_subtitle_de: 'Sushi Banana kombiniert traditionelle Handwerkskunst mit modernem Flair. Exklusiv als Lieferservice.',
+  hero_subtitle_en: 'Sushi Banana combines traditional craftsmanship with modern flair. Delivery exclusive.',
   hero_image: 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&q=80&w=1600',
   about_heading: 'Passion on a plate.',
-  about_text_de: '„Qualität, die man schmeckt. Leidenschaft, die man sieht. Sushi, das man liebt. BANANA Sushi steht für kreative Fusionen und absolute Frische."',
-  about_text_en: '"Quality you can taste. Passion you can see. Sushi you will love. BANANA Sushi stands for creative fusions and absolute freshness."',
+  about_text_de: '„Qualität, die man schmeckt. Leidenschaft, die man sieht. Sushi, das man liebt. Sushi Banana steht für kreative Fusionen und absolute Frische."',
+  about_text_en: '"Quality you can taste. Passion you can see. Sushi you will love. Sushi Banana stands for creative fusions and absolute freshness."',
   about_image: 'https://images.unsplash.com/photo-1617196034183-421b4040ed20?auto=format&fit=crop&q=80&w=1200',
   gallery_subtitle: 'Art on a plate',
   gallery_1: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&fit=crop&q=80&w=800',

@@ -184,12 +184,13 @@ export default function MenuManagementPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this item?')) return;
-    const res = await fetch(`/api/menu/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/menu/${id}`, { method: 'DELETE', credentials: 'include' });
     if (res.ok) {
       addToast('Item deleted', 'success');
       setItems(prev => prev.filter(i => i.id !== id));
     } else {
-      addToast('Failed to delete', 'error');
+      const data = await res.json().catch(() => ({}));
+      addToast(data.error || 'Failed to delete', 'error');
     }
   };
 

@@ -40,7 +40,7 @@ export const Footer = () => {
           {/* Col 1 — Brand */}
           <div className="space-y-6">
             <Link href="/">
-              <Image src="/logo.png" alt="Banana Sushi" width={160} height={50} className="h-14 w-auto" />
+              <Image src="/logo.png" alt="Sushi Banana" width={160} height={50} className="h-14 w-auto" />
             </Link>
             <p className="text-gray-400 font-bold text-xs uppercase tracking-widest leading-relaxed max-w-xs">
               Creative fusions. Absolute freshness. Delivered straight to your door.
@@ -98,7 +98,7 @@ export const Footer = () => {
         {/* Bottom bar */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">
-            © {new Date().getFullYear()} Banana Sushi · {t.footer.rights}
+            © {new Date().getFullYear()} Sushi Banana · {t.footer.rights}
           </p>
         </div>
       </div>

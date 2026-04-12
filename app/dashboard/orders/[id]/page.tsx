@@ -81,7 +81,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 </style>
 </head><body>
 <div class="center" style="padding-bottom:12px;border-bottom:1px dashed #000;margin-bottom:14px">
-  <h1>BANANA SUSHI.</h1>
+  <h1>Sushi Banana.</h1>
   <div class="small">Sushi-Allee 42, 10115 Berlin</div>
   <div class="small">+49 (0) 30 123 456 78</div>
 </div>
