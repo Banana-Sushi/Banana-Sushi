@@ -47,6 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath('/');
+  revalidatePath('/menu');
   return NextResponse.json(data);
 }
 
@@ -57,11 +58,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const supabase = createServerSupabaseClient();
 
-  // Fetch image URL before deleting
-  const { data: item } = await supabase.from('menu_items').select('image').eq('id', id).single();
+  // Delete and return the image URL in a single query
+  const { data: item, error } = await supabase
+    .from('menu_items')
+    .delete()
+    .eq('id', id)
+    .select('image')
+    .single();
 
-  const { error } = await supabase.from('menu_items').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  revalidatePath('/');
+  revalidatePath('/menu');
 
   // Delete from Supabase storage if image is from menu-images bucket (fire-and-forget)
   if (item?.image) {
