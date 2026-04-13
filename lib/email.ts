@@ -50,7 +50,9 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
             <p style="margin:0;font-weight:700;font-size:14px;">${order.address}, ${order.zipCode} ${order.city}</p>
           </div>` : ''}
           <p style="color:#6b7280;font-size:13px;line-height:1.6;">
-            We are currently preparing your order. You will receive your delivery within the usual timeframe.
+            ${order.paymentMethod.startsWith('pickup')
+              ? 'We are currently preparing your order. It will be ready for pickup at our restaurant shortly.'
+              : 'We are currently preparing your order. You will receive your delivery within the usual timeframe.'}
           </p>
           <hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0;">
           <p style="color:#d1d5db;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin:0;">
