@@ -60,7 +60,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setUpdating(false);
   };
 
-  const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const esc = (s: string | null) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
   const handlePrint = () => {
     if (!order) return;
