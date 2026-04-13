@@ -10,22 +10,24 @@ export async function POST(req: NextRequest) {
   const supabase = createServerSupabaseClient();
   const orderNumber = await generateOrderNumber(supabase);
 
+  const isPickup = body.paymentMethod === 'pickup_online';
+
   // Create order in DB with pending status first
-  const { data: order, error: orderError } = await supabase 
+  const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       order_number: orderNumber,
       customer_name: body.customerName,
       phone: body.phone,
-      address: body.address,
-      zip_code: body.zipCode,
-      city: body.city,
+      address: body.address ?? null,
+      zip_code: body.zipCode ?? null,
+      city: body.city ?? null,
       delivery_note: body.deliveryNote ?? null,
-      payment_method: 'online',
+      payment_method: isPickup ? 'pickup_online' : 'online',
       status: 'pending',
       items: body.items,
       subtotal: body.subtotal,
-      delivery_fee: body.deliveryFee,
+      delivery_fee: body.deliveryFee ?? 0,
       total: body.total,
     })
     .select()
@@ -43,15 +45,17 @@ export async function POST(req: NextRequest) {
     quantity: item.quantity,
   }));
 
-  // Add delivery fee
-  lineItems.push({
-    price_data: {
-      currency: 'eur',
-      product_data: { name: 'Delivery Fee' },
-      unit_amount: Math.round(body.deliveryFee * 100),
-    },
-    quantity: 1,
-  });
+  // Add delivery fee only for non-pickup orders
+  if (!isPickup && body.deliveryFee > 0) {
+    lineItems.push({
+      price_data: {
+        currency: 'eur',
+        product_data: { name: 'Delivery Fee' },
+        unit_amount: Math.round(body.deliveryFee * 100),
+      },
+      quantity: 1,
+    });
+  }
 
   let session;
   try {

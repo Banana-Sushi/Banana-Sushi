@@ -30,7 +30,9 @@ export function getDiscountedPrice(item: MenuItem): number {
   return Math.max(0, Math.round((base - item.discountValue) * 100) / 100);
 }
 
-export type OrderStatus = 'pending' | 'processing' | 'completed';
+export type OrderStatus = 'pending' | 'processing' | 'ready_for_pickup' | 'completed';
+
+export type PaymentMethod = 'online' | 'cash' | 'pickup_online' | 'pickup_cash';
 
 export interface OrderItem {
   menuItemId: string;
@@ -46,11 +48,11 @@ export interface Order {
   orderNumber: string;
   customerName: string;
   phone: string;
-  address: string;
-  zipCode: string;
-  city: string;
+  address: string | null;
+  zipCode: string | null;
+  city: string | null;
   deliveryNote?: string;
-  paymentMethod: 'online' | 'cash';
+  paymentMethod: PaymentMethod;
   status: OrderStatus;
   items: OrderItem[];
   subtotal: number;

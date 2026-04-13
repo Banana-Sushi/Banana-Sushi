@@ -44,9 +44,16 @@ function mapOrder(raw: any): Order {
   };
 }
 
+function isPickupOrder(order: Order) {
+  return order.paymentMethod === 'pickup_online' || order.paymentMethod === 'pickup_cash';
+}
+
 function OrderStatusPill({ order }: { order: Order }) {
   if (order.status === 'completed') {
     return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-green-50 text-green-500">Completed</span>;
+  }
+  if (order.status === 'ready_for_pickup') {
+    return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-blue-50 text-blue-500">Ready for Pickup</span>;
   }
   if (!order.acknowledgedAt) {
     return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-red-50 text-red-500 animate-pulse">New</span>;
@@ -56,6 +63,7 @@ function OrderStatusPill({ order }: { order: Order }) {
 
 function orderBarColor(order: Order) {
   if (order.status === 'completed') return 'bg-green-500';
+  if (order.status === 'ready_for_pickup') return 'bg-blue-400';
   if (!order.acknowledgedAt) return 'bg-red-400';
   return 'bg-yellow-400';
 }
@@ -144,6 +152,7 @@ export default function OrdersPage() {
       });
     }
 
+    const isPickup = isPickupOrder(selectedOrder);
     const date = new Date(selectedOrder.createdAt);
     const dateStr = date.toLocaleDateString('de-DE');
     const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -201,11 +210,10 @@ export default function OrdersPage() {
   <div class="dash"></div>
 
   <div style="margin-bottom:8px;font-size:11px;">
-    <div class="sm bold" style="letter-spacing:1px;margin-bottom:3px;">DELIVER TO:</div>
+    <div class="sm bold" style="letter-spacing:1px;margin-bottom:3px;">${isPickup ? 'PICKUP BY:' : 'DELIVER TO:'}</div>
     <div class="bold">${selectedOrder.customerName}</div>
     <div>${selectedOrder.phone}</div>
-    <div>${selectedOrder.address}</div>
-    <div>${selectedOrder.zipCode} ${selectedOrder.city}</div>
+    ${!isPickup ? `<div>${selectedOrder.address}</div><div>${selectedOrder.zipCode} ${selectedOrder.city}</div>` : ''}
     ${selectedOrder.deliveryNote ? `<div style="margin-top:4px;font-size:10px;font-style:italic;">Note: ${selectedOrder.deliveryNote}</div>` : ''}
   </div>
 
@@ -237,9 +245,14 @@ export default function OrdersPage() {
   <div style="margin-bottom:10px;font-size:11px;">
     <div class="flex">
       <span class="bold">PAYMENT</span>
-      <span>${selectedOrder.paymentMethod === 'online' ? 'Online (Paid)' : 'Cash on Delivery'}</span>
+      <span>${
+        selectedOrder.paymentMethod === 'online' ? 'Online (Paid)' :
+        selectedOrder.paymentMethod === 'cash' ? 'Cash on Delivery' :
+        selectedOrder.paymentMethod === 'pickup_online' ? 'Pickup (Paid Online)' :
+        'Pickup (Pay at Restaurant)'
+      }</span>
     </div>
-    ${selectedOrder.paymentMethod === 'online' ? `
+    ${(selectedOrder.paymentMethod === 'online' || selectedOrder.paymentMethod === 'pickup_online') ? `
     <div class="flex sm" style="margin-top:2px;">
       <span>Status</span><span class="bold">PAID ✓</span>
     </div>` : ''}
@@ -267,12 +280,13 @@ export default function OrdersPage() {
 
   const filtered = useMemo(() => {
     if (filter === 'all') return orders;
+    if (filter === 'processing') return orders.filter(o => o.status === 'processing' || o.status === 'ready_for_pickup');
     return orders.filter(o => o.status === filter);
   }, [orders, filter]);
 
   const counts = useMemo(() => ({
     all: orders.length,
-    processing: orders.filter(o => o.status === 'processing').length,
+    processing: orders.filter(o => o.status === 'processing' || o.status === 'ready_for_pickup').length,
     completed: orders.filter(o => o.status === 'completed').length,
     new: orders.filter(o => o.status === 'processing' && !o.acknowledgedAt).length,
   }), [orders]);
@@ -291,6 +305,26 @@ export default function OrdersPage() {
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
       setSelectedOrder(updated);
       addToast('Order marked as completed', 'success');
+    } else {
+      addToast('Failed to update status', 'error');
+    }
+    setUpdating(false);
+  };
+
+  const markReadyForPickup = async () => {
+    if (!selectedOrder) return;
+    setUpdating(true);
+    const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ready_for_pickup' }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const updated = mapOrder(data);
+      setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+      setSelectedOrder(updated);
+      addToast(t.dashboard.readyForPickup, 'success');
     } else {
       addToast('Failed to update status', 'error');
     }
@@ -437,9 +471,17 @@ export default function OrdersPage() {
                   <p className="text-gray-400 mt-1 font-bold">{selectedOrder.phone}</p>
                 </div>
                 <div>
-                  <p className="text-gray-300 mb-1">{t.dashboard.deliveryAddress}</p>
-                  <p className="text-sm">{selectedOrder.address}</p>
-                  <p className="text-gray-400 mt-1 font-bold">{selectedOrder.zipCode} {selectedOrder.city}</p>
+                  <p className="text-gray-300 mb-1">
+                    {isPickupOrder(selectedOrder) ? t.dashboard.pickupOrder : t.dashboard.deliveryAddress}
+                  </p>
+                  {isPickupOrder(selectedOrder) ? (
+                    <p className="text-gray-400 font-bold">—</p>
+                  ) : (
+                    <>
+                      <p className="text-sm">{selectedOrder.address}</p>
+                      <p className="text-gray-400 mt-1 font-bold">{selectedOrder.zipCode} {selectedOrder.city}</p>
+                    </>
+                  )}
                   {selectedOrder.deliveryNote && <p className="text-gray-400 mt-1 italic font-bold">{selectedOrder.deliveryNote}</p>}
                 </div>
               </div>
@@ -447,8 +489,15 @@ export default function OrdersPage() {
               {/* Payment */}
               <div className="mb-6">
                 <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-2">{t.dashboard.paymentStatus}</p>
-                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${selectedOrder.paymentMethod === 'online' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
-                  {selectedOrder.paymentMethod === 'online' ? 'Online' : 'Cash on Delivery'}
+                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${
+                  selectedOrder.paymentMethod === 'online' ? 'bg-blue-50 text-blue-500' :
+                  selectedOrder.paymentMethod === 'pickup_online' ? 'bg-purple-50 text-purple-500' :
+                  'bg-orange-50 text-orange-500'
+                }`}>
+                  {selectedOrder.paymentMethod === 'online' ? 'Online' :
+                   selectedOrder.paymentMethod === 'cash' ? 'Cash on Delivery' :
+                   selectedOrder.paymentMethod === 'pickup_online' ? t.dashboard.pickupPaidOnline :
+                   t.dashboard.pickupPayOnArrival}
                 </span>
               </div>
 
@@ -501,7 +550,19 @@ export default function OrdersPage() {
 
               {/* Actions */}
               <div className="flex gap-3">
-                {selectedOrder.status === 'processing' && (
+                {/* Pickup order in processing → Mark Ready for Pickup */}
+                {selectedOrder.status === 'processing' && isPickupOrder(selectedOrder) && (
+                  <button
+                    onClick={markReadyForPickup}
+                    disabled={updating}
+                    className="flex-1 bg-blue-500 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {updating ? '...' : t.dashboard.markReadyForPickup}
+                  </button>
+                )}
+                {/* Delivery order in processing OR pickup order ready for pickup → Mark Complete */}
+                {((selectedOrder.status === 'processing' && !isPickupOrder(selectedOrder)) ||
+                  selectedOrder.status === 'ready_for_pickup') && (
                   <button
                     onClick={markComplete}
                     disabled={updating}

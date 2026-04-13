@@ -92,12 +92,21 @@ export default function HistoryPage() {
                   </td>
                   <td className="px-8 py-6 text-base font-black">{order.total.toFixed(2)}€</td>
                   <td className="px-8 py-6">
-                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${order.status === 'completed' ? 'bg-green-50 text-green-500' : 'bg-yellow-50 text-yellow-600'}`}>
-                      {order.status === 'completed' ? t.dashboard.completed : t.dashboard.processing}
+                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${
+                      order.status === 'completed' ? 'bg-green-50 text-green-500' :
+                      order.status === 'ready_for_pickup' ? 'bg-blue-50 text-blue-500' :
+                      'bg-yellow-50 text-yellow-600'
+                    }`}>
+                      {order.status === 'completed' ? t.dashboard.completed :
+                       order.status === 'ready_for_pickup' ? t.dashboard.readyForPickup :
+                       t.dashboard.processing}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-[10px] font-black uppercase text-gray-400">
-                    {order.paymentMethod === 'online' ? 'Card' : 'Cash'}
+                    {order.paymentMethod === 'online' ? 'Card' :
+                     order.paymentMethod === 'cash' ? 'Cash' :
+                     order.paymentMethod === 'pickup_online' ? 'Pickup (Card)' :
+                     'Pickup (On-site)'}
                   </td>
                 </tr>
               ))}

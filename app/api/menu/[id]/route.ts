@@ -63,12 +63,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { error } = await supabase.from('menu_items').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Delete from Supabase storage if image is from menu-images bucket
+  // Delete from Supabase storage if image is from menu-images bucket (fire-and-forget)
   if (item?.image) {
     const bucketBase = supabase.storage.from('menu-images').getPublicUrl('').data.publicUrl.replace(/\/$/, '');
     if (item.image.startsWith(bucketBase)) {
       const filePath = item.image.slice(bucketBase.length + 1);
-      await supabase.storage.from('menu-images').remove([filePath]);
+      supabase.storage.from('menu-images').remove([filePath]);
     }
   }
 

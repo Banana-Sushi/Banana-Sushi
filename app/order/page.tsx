@@ -11,9 +11,13 @@ export default function OrderPage() {
   const { cart, removeFromCart, clearCart, t, lang, addToast } = useAppContext();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online');
+  const [deliveryMode, setDeliveryMode] = useState<'delivery' | 'pickup'>('delivery');
+  const [paymentChoice, setPaymentChoice] = useState<'online' | 'cash'>('online');
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', zip: '', city: '', note: '' });
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+
+  const isPickup = deliveryMode === 'pickup';
+  const effectiveDeliveryFee = isPickup ? 0 : (deliveryFee ?? 0);
 
   useEffect(() => {
     fetch('/api/content')
@@ -26,21 +30,28 @@ export default function OrderPage() {
   }, []);
 
   const subtotal = cart.reduce((acc, c) => acc + c.effectivePrice * c.quantity, 0);
-  const total = subtotal + (deliveryFee ?? 0);
+  const total = subtotal + effectiveDeliveryFee;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
     setLoading(true);
 
+    let paymentMethod: string;
+    if (isPickup) {
+      paymentMethod = paymentChoice === 'online' ? 'pickup_online' : 'pickup_cash';
+    } else {
+      paymentMethod = paymentChoice;
+    }
+
     const orderData = {
       customerName: form.name,
       email: form.email,
       phone: form.phone,
-      address: form.address,
-      zipCode: form.zip,
-      city: form.city,
-      deliveryNote: form.note,
+      address: isPickup ? null : form.address,
+      zipCode: isPickup ? null : form.zip,
+      city: isPickup ? null : form.city,
+      deliveryNote: form.note || null,
       paymentMethod,
       items: cart.map(c => ({
         menuItemId: c.item.id,
@@ -51,12 +62,12 @@ export default function OrderPage() {
         selectedMandatoryAddons: c.selectedMandatoryAddons,
       })),
       subtotal,
-      deliveryFee: deliveryFee,
+      deliveryFee: effectiveDeliveryFee,
       total,
     };
 
     try {
-      if (paymentMethod === 'online') {
+      if (paymentChoice === 'online') {
         const res = await fetch('/api/stripe/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -152,11 +163,13 @@ export default function OrderPage() {
             </div>
             <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
               <span>{t.checkout.delivery}</span>
-              <span className="text-black">{deliveryFee !== null ? `${deliveryFee.toFixed(2)}€` : '...'}</span>
+              <span className="text-black">
+                {isPickup ? (lang === 'de' ? 'Kostenlos' : 'Free') : (deliveryFee !== null ? `${deliveryFee.toFixed(2)}€` : '...')}
+              </span>
             </div>
             <div className="flex justify-between items-baseline pt-3 border-t border-gray-200 text-black">
               <span className="font-black uppercase tracking-widest text-[10px]">{t.checkout.total}</span>
-              <span className="text-3xl font-black">{deliveryFee !== null ? `${total.toFixed(2)}€` : '...'}</span>
+              <span className="text-3xl font-black">{(isPickup || deliveryFee !== null) ? `${total.toFixed(2)}€` : '...'}</span>
             </div>
             <p className="text-[9px] text-gray-300 font-bold uppercase pt-1">{t.checkout.taxInfo}</p>
           </div>
@@ -164,6 +177,49 @@ export default function OrderPage() {
 
         {/* Order form */}
         <form onSubmit={handleSubmit} className="w-full xl:w-[400px] shrink-0 space-y-5 bg-gray-50 p-8 md:p-10 rounded-[2.5rem]">
+
+          {/* Delivery mode choice */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t.checkout.payment}</p>
+
+            {/* Online Payment (delivery) */}
+            <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${deliveryMode === 'delivery' && paymentChoice === 'online' ? 'border-yellow-500' : 'border-transparent'}`}>
+              <input type="radio" name="mode" value="delivery_online" checked={deliveryMode === 'delivery' && paymentChoice === 'online'} onChange={() => { setDeliveryMode('delivery'); setPaymentChoice('online'); }} className="accent-black" />
+              {t.checkout.online}
+            </label>
+
+            {/* Cash on Delivery */}
+            <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${deliveryMode === 'delivery' && paymentChoice === 'cash' ? 'border-yellow-500' : 'border-transparent'}`}>
+              <input type="radio" name="mode" value="delivery_cash" checked={deliveryMode === 'delivery' && paymentChoice === 'cash'} onChange={() => { setDeliveryMode('delivery'); setPaymentChoice('cash'); }} className="accent-black" />
+              {t.checkout.cash}
+            </label>
+
+            {/* Pickup */}
+            <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${isPickup ? 'border-yellow-500' : 'border-transparent'}`}>
+              <input type="radio" name="mode" value="pickup" checked={isPickup} onChange={() => { setDeliveryMode('pickup'); setPaymentChoice('online'); }} className="accent-black" />
+              {t.checkout.pickup}
+            </label>
+
+            {/* Pickup sub-options */}
+            {isPickup && (
+              <div className="ml-4 space-y-2 animate-fade-in">
+                <p className="text-[9px] font-black uppercase text-gray-300 tracking-widest px-1">{t.checkout.pickupInfo}</p>
+                <label className={`flex items-center gap-4 bg-gray-100 p-3 rounded-xl cursor-pointer font-black text-[10px] uppercase border-2 transition-all ${paymentChoice === 'online' ? 'border-yellow-500' : 'border-transparent'}`}>
+                  <input type="radio" name="pickup_payment" value="online" checked={paymentChoice === 'online'} onChange={() => setPaymentChoice('online')} className="accent-black" />
+                  {t.checkout.pickupPayOnline}
+                </label>
+                <label className={`flex items-center gap-4 bg-gray-100 p-3 rounded-xl cursor-pointer font-black text-[10px] uppercase border-2 transition-all ${paymentChoice === 'cash' ? 'border-yellow-500' : 'border-transparent'}`}>
+                  <input type="radio" name="pickup_payment" value="cash" checked={paymentChoice === 'cash'} onChange={() => setPaymentChoice('cash')} className="accent-black" />
+                  {t.checkout.pickupPayAtRestaurant}
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* Contact fields — always shown */}
+          <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest pt-2">
+            {isPickup ? t.checkout.contactInfo : t.checkout.customerInfo}
+          </p>
           <input
             required
             placeholder={t.checkout.name}
@@ -186,29 +242,36 @@ export default function OrderPage() {
             onChange={e => setForm({ ...form, phone: e.target.value })}
             className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
           />
-          <input
-            required
-            placeholder={t.checkout.address}
-            value={form.address}
-            onChange={e => setForm({ ...form, address: e.target.value })}
-            className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
-          />
-          <div className="flex gap-3">
-            <input
-              required
-              placeholder={t.checkout.zip}
-              value={form.zip}
-              onChange={e => setForm({ ...form, zip: e.target.value })}
-              className="w-1/3 p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
-            />
-            <input
-              required
-              placeholder={t.checkout.city}
-              value={form.city}
-              onChange={e => setForm({ ...form, city: e.target.value })}
-              className="w-2/3 p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
-            />
-          </div>
+
+          {/* Address fields — only for delivery */}
+          {!isPickup && (
+            <>
+              <input
+                required
+                placeholder={t.checkout.address}
+                value={form.address}
+                onChange={e => setForm({ ...form, address: e.target.value })}
+                className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
+              />
+              <div className="flex gap-3">
+                <input
+                  required
+                  placeholder={t.checkout.zip}
+                  value={form.zip}
+                  onChange={e => setForm({ ...form, zip: e.target.value })}
+                  className="w-1/3 p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
+                />
+                <input
+                  required
+                  placeholder={t.checkout.city}
+                  value={form.city}
+                  onChange={e => setForm({ ...form, city: e.target.value })}
+                  className="w-2/3 p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
+                />
+              </div>
+            </>
+          )}
+
           <textarea
             placeholder={t.checkout.notes}
             value={form.note}
@@ -216,18 +279,6 @@ export default function OrderPage() {
             rows={2}
             className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm resize-none"
           />
-
-          <div className="pt-4 space-y-4">
-            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t.checkout.payment}</p>
-            <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${paymentMethod === 'online' ? 'border-yellow-500' : 'border-transparent'}`}>
-              <input type="radio" name="payment" value="online" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="accent-black" />
-              {t.checkout.online}
-            </label>
-            <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${paymentMethod === 'cash' ? 'border-yellow-500' : 'border-transparent'}`}>
-              <input type="radio" name="payment" value="cash" checked={paymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} className="accent-black" />
-              {t.checkout.cash}
-            </label>
-          </div>
 
           <button
             type="submit"
