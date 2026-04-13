@@ -44,10 +44,11 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
               <td style="padding:12px 0;text-align:right;font-size:18px;font-weight:900;">${order.total.toFixed(2)}€</td>
             </tr>
           </table>
+          ${!order.paymentMethod.startsWith('pickup') ? `
           <div style="background:#f9fafb;border-radius:16px;padding:20px;margin-bottom:24px;">
             <p style="margin:0 0 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#9ca3af;">Delivery to</p>
             <p style="margin:0;font-weight:700;font-size:14px;">${order.address}, ${order.zipCode} ${order.city}</p>
-          </div>
+          </div>` : ''}
           <p style="color:#6b7280;font-size:13px;line-height:1.6;">
             We are currently preparing your order. You will receive your delivery within the usual timeframe.
           </p>
