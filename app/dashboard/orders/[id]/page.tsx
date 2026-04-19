@@ -64,62 +64,97 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const handlePrint = () => {
     if (!order) return;
-    // Epson TM-T88VII: 80mm paper, 72mm printable width, 180 DPI
-    const win = window.open('', '_blank', 'width=320,height=600');
+    const win = window.open('', '_blank', 'width=400,height=700');
     if (!win) return;
     const dateStr = new Date(order.createdAt).toLocaleDateString('de-DE');
     const timeStr = new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+    // Epson TM-T88VII: 80mm paper, 203 DPI, Font A = 42 chars/line at normal size
+    // Use table layout — flexbox is unreliable for thermal printer drivers
+    const COL = 42; // characters per line
+    const priceW = 10; // chars reserved for price column
+    const nameW = COL - priceW - 1;
+
+    const padRight = (s: string, len: number) => s.slice(0, len).padEnd(len);
+    const padLeft = (s: string, len: number) => s.slice(0, len).padStart(len);
+
+    const itemLines = order.items.map(item => {
+      const label = `${item.quantity}x ${item.name}`;
+      const price = `${(item.price * item.quantity).toFixed(2)}EUR`;
+      return `<tr><td class="name">${esc(padRight(label, nameW))}</td><td class="price">${esc(padLeft(price, priceW))}</td></tr>`;
+    }).join('');
+
+    const orderNumLine = `<tr><td class="name bold">ORDER #</td><td class="price bold">${esc(order.orderNumber)}</td></tr>`;
+    const dateLine = `<tr><td class="name">${dateStr}</td><td class="price">${timeStr}</td></tr>`;
+    const subtotalLine = `<tr><td class="name">Subtotal</td><td class="price">${order.subtotal.toFixed(2)} EUR</td></tr>`;
+    const deliveryLine = `<tr><td class="name">Delivery fee</td><td class="price">${order.deliveryFee.toFixed(2)} EUR</td></tr>`;
+    const totalLine = `<tr><td class="name bold xl">TOTAL</td><td class="price bold xl">${order.total.toFixed(2)} EUR</td></tr>`;
+    const paymentMethod = order.paymentMethod === 'online' ? 'Online (Card)' : 'Pickup (Pay at restaurant)';
+
     win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Receipt ${esc(order.orderNumber)}</title>
+<html><head><meta charset="utf-8"><title>Receipt</title>
 <style>
-  @page { size: 80mm auto; margin: 3mm 4mm; }
+  @page { size: 80mm auto; margin: 2mm 0mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Courier New', Courier, monospace; font-size: 9pt; color: #000; width: 72mm; }
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 8pt;
+    color: #000;
+    width: 76mm;
+    padding: 0 2mm;
+    word-break: break-word;
+  }
   .center { text-align: center; }
   .bold { font-weight: bold; }
-  .lg { font-size: 13pt; font-weight: bold; }
-  .xl { font-size: 16pt; font-weight: bold; letter-spacing: 2px; }
-  .sep { border: none; border-top: 1px dashed #000; margin: 5px 0; }
-  .row { display: flex; justify-content: space-between; line-height: 1.6; }
-  .row span:last-child { white-space: nowrap; margin-left: 4px; }
-  .row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .xl { font-size: 11pt; }
+  .header-title { font-size: 14pt; font-weight: bold; letter-spacing: 1px; }
+  .sep { width: 100%; border: none; border-top: 1px dashed #000; margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  td { vertical-align: top; padding: 1px 0; white-space: pre-wrap; word-break: break-word; }
+  td.name { width: 68%; }
+  td.price { width: 32%; text-align: right; white-space: nowrap; }
+  .footer { margin-top: 6px; }
+  .stars { letter-spacing: 2px; }
 </style>
 </head><body>
-<div class="center" style="margin-bottom:6px">
-  <div class="xl">SUSHI BANANA</div>
+<div class="center" style="margin-bottom:5px">
+  <div class="header-title">Sushi Banana</div>
   <div>Sushi-Allee 42, 10115 Berlin</div>
-  <div>+49 (0) 30 123 456 78</div>
+  <div>Tel: +49 (0) 30 123 456 78</div>
+  <div>www.bananasushi.de</div>
 </div>
 <hr class="sep">
-<div style="margin-bottom:5px">
-  <div class="row"><span class="bold">ORDER</span><span class="bold">${esc(order.orderNumber)}</span></div>
-  <div class="row"><span>${dateStr}</span><span>${timeStr}</span></div>
-</div>
+<table>${orderNumLine}${dateLine}</table>
 <hr class="sep">
-<div style="margin-bottom:5px">
-  <div class="bold">${esc(order.customerName)}</div>
-  <div>${esc(order.phone)}</div>
-  <div>${esc(order.address)}</div>
-  <div>${esc(order.zipCode)} ${esc(order.city)}</div>
-  ${order.deliveryNote ? `<div style="margin-top:3px">Note: ${esc(order.deliveryNote)}</div>` : ''}
-</div>
+<div class="bold">PICKUP BY:</div>
+<div>${esc(order.customerName)}</div>
+<div>${esc(order.phone)}</div>
+${order.address ? `<div>${esc(order.address)}</div>` : ''}
+${order.zipCode || order.city ? `<div>${esc(order.zipCode)} ${esc(order.city)}</div>` : ''}
+${order.deliveryNote ? `<div>Note: ${esc(order.deliveryNote)}</div>` : ''}
 <hr class="sep">
-${order.items.map(item => `<div class="row"><span>${item.quantity}x ${esc(item.name)}</span><span>${(item.price * item.quantity).toFixed(2)}&#8364;</span></div>`).join('')}
+<table>
+  <tr><td class="name bold">ITEM</td><td class="price bold">TOTAL</td></tr>
+</table>
 <hr class="sep">
-<div class="row"><span>Subtotal</span><span>${order.subtotal.toFixed(2)}&#8364;</span></div>
-<div class="row"><span>Delivery</span><span>${order.deliveryFee.toFixed(2)}&#8364;</span></div>
+<table>${itemLines}</table>
 <hr class="sep">
-<div class="row lg"><span>TOTAL</span><span>${order.total.toFixed(2)}&#8364;</span></div>
+<table>${subtotalLine}${deliveryLine}</table>
 <hr class="sep">
-<div class="center" style="margin-top:5px">
-  <div>Zahlung: ${order.paymentMethod === 'online' ? 'Online (Karte)' : 'Bar bei Lieferung'}</div>
-  <div style="margin-top:6px" class="bold">Vielen Dank fuer Ihre Bestellung!</div>
+<table>${totalLine}</table>
+<hr class="sep">
+<div>PAYMENT: ${esc(paymentMethod)}</div>
+<hr class="sep">
+<div class="center footer">
+  <div>Vielen Dank fuer Ihre Bestellung!</div>
   <div>Thank you for your order!</div>
+  <div style="margin-top:6px" class="stars">* * * * * * * * * * * * *</div>
+  <div style="margin-top:4px;font-size:7pt">${esc(order.orderNumber)} &middot; ${dateStr}</div>
 </div>
 </body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 300);
+    setTimeout(() => { win.print(); win.close(); }, 400);
   };
 
   if (loading) {
