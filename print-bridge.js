@@ -13,9 +13,9 @@ const http = require('http');
 const net  = require('net');
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BRIDGE_PORT  = 9191;           // port the browser calls (localhost:9191)
-const PRINTER_HOST = '192.168.1.x';  // ← replace with your Epson's IP address
-const PRINTER_PORT = 9100;           // standard raw print port (do not change)
+const BRIDGE_PORT  = 9191;            // port the browser calls (localhost:9191)
+const PRINTER_HOST = '192.168.178.26'; // Epson TM-T88VII_26 (main receipt printer)
+const PRINTER_PORT = 9100;            // standard raw print port (do not change)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function sendToEpson(data) {
