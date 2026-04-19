@@ -5,8 +5,9 @@ import { buildReceipt, receiptToBase64, type ReceiptData } from '@/lib/escpos-re
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   // Auth guard — dashboard staff only
   const token = req.cookies.get('auth_token')?.value;
   const user  = token ? await verifyToken(token) : null;
@@ -16,7 +17,7 @@ export async function GET(
   const { data: order, error } = await supabase
     .from('orders')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
   if (error || !order) {
