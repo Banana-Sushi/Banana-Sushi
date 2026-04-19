@@ -117,7 +117,18 @@ export const translations = {
       staffPassword: 'Passwort',
       staffPasswordHint: 'Leer lassen, um das Passwort nicht zu ändern',
       deleteStaff: 'Mitarbeiter löschen',
-      confirmDelete: 'Wirklich löschen?'
+      confirmDelete: 'Wirklich löschen?',
+      qrCode: 'QR Code',
+      qrCodeSubtitle: 'Designen & herunterladen',
+      qrLink: 'Link',
+      qrFgColor: 'Vordergrund',
+      qrBgColor: 'Hintergrund',
+      qrLogo: 'Logo zentriert',
+      qrDownloadPng: 'PNG herunterladen',
+      qrCopyLink: 'Link kopieren',
+      qrCopied: 'Kopiert!',
+      qrPresets: 'Schnellauswahl',
+      qrCustom: 'Eigener Link'
     }
   },
   en: {
@@ -238,7 +249,18 @@ export const translations = {
       staffPassword: 'Password',
       staffPasswordHint: 'Leave blank to keep current password',
       deleteStaff: 'Delete Staff Member',
-      confirmDelete: 'Are you sure?'
+      confirmDelete: 'Are you sure?',
+      qrCode: 'QR Code',
+      qrCodeSubtitle: 'Design & download',
+      qrLink: 'Link',
+      qrFgColor: 'Foreground',
+      qrBgColor: 'Background',
+      qrLogo: 'Centered logo',
+      qrDownloadPng: 'Download PNG',
+      qrCopyLink: 'Copy link',
+      qrCopied: 'Copied!',
+      qrPresets: 'Quick select',
+      qrCustom: 'Custom link'
     }
   }
 };

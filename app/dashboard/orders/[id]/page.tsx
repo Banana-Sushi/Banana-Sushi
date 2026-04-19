@@ -64,55 +64,62 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const handlePrint = () => {
     if (!order) return;
-    const win = window.open('', '_blank', 'width=700,height=900');
+    // Epson TM-T88VII: 80mm paper, 72mm printable width, 180 DPI
+    const win = window.open('', '_blank', 'width=320,height=600');
     if (!win) return;
+    const dateStr = new Date(order.createdAt).toLocaleDateString('de-DE');
+    const timeStr = new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
     win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Receipt ${esc(order.orderNumber)}</title>
 <style>
-  @page { margin: 15mm; }
+  @page { size: 80mm auto; margin: 3mm 4mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Courier New', monospace; font-size: 13px; color: #000; max-width: 480px; margin: 0 auto; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 9pt; color: #000; width: 72mm; }
   .center { text-align: center; }
-  .small { font-size: 11px; }
-  .dashed { border-top: 1px dashed #000; margin: 12px 0 0; padding-top: 12px; }
-  .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-  .total-row { display: flex; justify-content: space-between; font-weight: 900; font-size: 17px; margin-top: 8px; padding-top: 8px; border-top: 2px solid #000; }
-  h1 { font-size: 22px; letter-spacing: 3px; margin-bottom: 4px; font-weight: 900; }
+  .bold { font-weight: bold; }
+  .lg { font-size: 13pt; font-weight: bold; }
+  .xl { font-size: 16pt; font-weight: bold; letter-spacing: 2px; }
+  .sep { border: none; border-top: 1px dashed #000; margin: 5px 0; }
+  .row { display: flex; justify-content: space-between; line-height: 1.6; }
+  .row span:last-child { white-space: nowrap; margin-left: 4px; }
+  .row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head><body>
-<div class="center" style="padding-bottom:12px;border-bottom:1px dashed #000;margin-bottom:14px">
-  <h1>Sushi Banana.</h1>
-  <div class="small">Sushi-Allee 42, 10115 Berlin</div>
-  <div class="small">+49 (0) 30 123 456 78</div>
+<div class="center" style="margin-bottom:6px">
+  <div class="xl">SUSHI BANANA</div>
+  <div>Sushi-Allee 42, 10115 Berlin</div>
+  <div>+49 (0) 30 123 456 78</div>
 </div>
-<div style="margin-bottom:12px">
-  <div style="font-weight:900">ORDER ${esc(order.orderNumber)}</div>
-  <div class="small">${new Date(order.createdAt).toLocaleDateString('de-DE')} ${new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>
+<hr class="sep">
+<div style="margin-bottom:5px">
+  <div class="row"><span class="bold">ORDER</span><span class="bold">${esc(order.orderNumber)}</span></div>
+  <div class="row"><span>${dateStr}</span><span>${timeStr}</span></div>
 </div>
-<div class="dashed" style="margin-bottom:12px">
-  <div style="font-weight:900">${esc(order.customerName)}</div>
+<hr class="sep">
+<div style="margin-bottom:5px">
+  <div class="bold">${esc(order.customerName)}</div>
   <div>${esc(order.phone)}</div>
   <div>${esc(order.address)}</div>
   <div>${esc(order.zipCode)} ${esc(order.city)}</div>
-  ${order.deliveryNote ? `<div style="margin-top:4px;font-style:italic">Note: ${esc(order.deliveryNote)}</div>` : ''}
+  ${order.deliveryNote ? `<div style="margin-top:3px">Note: ${esc(order.deliveryNote)}</div>` : ''}
 </div>
-<div class="dashed" style="margin-bottom:0">
-  ${order.items.map(item => `<div class="row"><span>${item.quantity}x ${esc(item.name)}</span><span>${(item.price * item.quantity).toFixed(2)}€</span></div>`).join('')}
-</div>
-<div class="dashed">
-  <div class="row small"><span>Subtotal</span><span>${order.subtotal.toFixed(2)}€</span></div>
-  <div class="row small"><span>Delivery</span><span>${order.deliveryFee.toFixed(2)}€</span></div>
-  <div class="total-row"><span>TOTAL</span><span>${order.total.toFixed(2)}€</span></div>
-</div>
-<div style="border-top:1px dashed #000;padding-top:12px;margin-top:14px;text-align:center" class="small">
-  <div>Zahlung: ${order.paymentMethod === 'online' ? 'Online' : 'Bar bei Lieferung'}</div>
-  <div style="margin-top:10px;font-weight:900">Vielen Dank für Ihre Bestellung!</div>
+<hr class="sep">
+${order.items.map(item => `<div class="row"><span>${item.quantity}x ${esc(item.name)}</span><span>${(item.price * item.quantity).toFixed(2)}&#8364;</span></div>`).join('')}
+<hr class="sep">
+<div class="row"><span>Subtotal</span><span>${order.subtotal.toFixed(2)}&#8364;</span></div>
+<div class="row"><span>Delivery</span><span>${order.deliveryFee.toFixed(2)}&#8364;</span></div>
+<hr class="sep">
+<div class="row lg"><span>TOTAL</span><span>${order.total.toFixed(2)}&#8364;</span></div>
+<hr class="sep">
+<div class="center" style="margin-top:5px">
+  <div>Zahlung: ${order.paymentMethod === 'online' ? 'Online (Karte)' : 'Bar bei Lieferung'}</div>
+  <div style="margin-top:6px" class="bold">Vielen Dank fuer Ihre Bestellung!</div>
   <div>Thank you for your order!</div>
 </div>
 </body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 250);
+    setTimeout(() => { win.print(); win.close(); }, 300);
   };
 
   if (loading) {

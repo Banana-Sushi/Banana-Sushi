@@ -107,4 +107,16 @@ export const Icons = {
       <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
   ),
+  QRCode: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/>
+      <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/>
+      <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/>
+      <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/>
+      <path d="M14 14h3v3h-3z" fill="currentColor" stroke="none"/>
+      <path d="M17 17h3v3h-3z" fill="currentColor" stroke="none"/>
+      <path d="M14 17h.01M17 14h.01" strokeWidth="2.5"/>
+    </svg>
+  ),
 };

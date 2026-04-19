@@ -18,6 +18,7 @@ export const DashboardSidebar = ({ role }: { role?: 'admin' | 'staff' | null }) 
     { to: '/dashboard/menu', label: t.dashboard.menuMgmt, icon: <Icons.Edit />, adminOnly: true },
     { to: '/dashboard/content', label: 'Content', icon: <Icons.Content />, adminOnly: true },
     { to: '/dashboard/staff', label: t.dashboard.staff, icon: <Icons.Users />, adminOnly: true },
+    { to: '/dashboard/qrcode', label: t.dashboard.qrCode, icon: <Icons.QRCode />, adminOnly: true },
   ].filter(l => !l.adminOnly || role === 'admin');
 
   const handleLogout = async () => {
