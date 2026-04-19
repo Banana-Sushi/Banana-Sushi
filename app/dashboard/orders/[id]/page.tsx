@@ -62,6 +62,38 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const esc = (s: string | null) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
+  /**
+   * Send raw ESC/POS bytes directly to the Epson via Web Serial API.
+   * Works in Chrome / Edge on desktop when the USB-Serial adapter is connected.
+   * Falls back gracefully with a toast if Web Serial is unavailable.
+   */
+  const handleEscPosPrint = async () => {
+    if (!order) return;
+    if (!('serial' in navigator)) {
+      addToast('Web Serial API not supported — use Chrome/Edge on desktop', 'error');
+      return;
+    }
+    try {
+      // Fetch raw ESC/POS bytes from the API
+      const res = await fetch(`/api/orders/${order.id}/receipt?format=raw`);
+      if (!res.ok) throw new Error('Failed to fetch receipt bytes');
+      const buffer = await res.arrayBuffer();
+
+      // Ask the user to pick the serial port (Epson shows as USB-Serial)
+      const port = await (navigator as any).serial.requestPort();
+      await port.open({ baudRate: 115200 });
+      const writer = port.writable.getWriter();
+      await writer.write(new Uint8Array(buffer));
+      writer.releaseLock();
+      await port.close();
+      addToast('Receipt sent to printer', 'success');
+    } catch (err: any) {
+      if (err?.name !== 'NotFoundError') { // user cancelled port picker
+        addToast(`Print error: ${err?.message ?? 'unknown'}`, 'error');
+      }
+    }
+  };
+
   const handlePrint = () => {
     if (!order) return;
     const win = window.open('', '_blank', 'width=320,height=700');
@@ -267,6 +299,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               className="flex items-center gap-2 bg-gray-100 text-black px-8 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-black hover:text-white transition-all"
             >
               <Icons.Print /> {t.dashboard.print}
+            </button>
+            <button
+              onClick={handleEscPosPrint}
+              title="Send raw ESC/POS bytes to Epson via USB-Serial (Chrome/Edge)"
+              className="flex items-center gap-2 bg-black text-white px-8 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-gray-800 transition-all"
+            >
+              <Icons.Print /> ESC/POS
             </button>
           </div>
         </div>
