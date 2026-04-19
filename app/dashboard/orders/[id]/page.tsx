@@ -65,12 +65,30 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const handleEscPosPrint = async () => {
     if (!order) return;
     try {
-      const res = await fetch(`/api/orders/${order.id}/receipt?format=network`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Print failed');
-      addToast('Receipt sent to printer', 'success');
+      // 1. Fetch raw ESC/POS bytes from Vercel API
+      const apiRes = await fetch(`/api/orders/${order.id}/receipt?format=raw`);
+      if (!apiRes.ok) throw new Error('Could not generate receipt');
+      const bytes = await apiRes.arrayBuffer();
+
+      // 2. POST bytes to the local print bridge (print-bridge.js running on restaurant PC)
+      const printRes = await fetch('http://localhost:9191/print', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: bytes,
+      });
+
+      if (!printRes.ok) {
+        const err = await printRes.json().catch(() => ({}));
+        throw new Error(err.error ?? 'Bridge error');
+      }
+
+      addToast('Receipt sent to printer ✓', 'success');
     } catch (err: any) {
-      addToast(`Print error: ${err?.message ?? 'unknown'}`, 'error');
+      if (err?.message?.includes('fetch') || err?.name === 'TypeError') {
+        addToast('Print bridge not running — start print-bridge.js on the restaurant PC', 'error');
+      } else {
+        addToast(`Print error: ${err?.message ?? 'unknown'}`, 'error');
+      }
     }
   };
 
