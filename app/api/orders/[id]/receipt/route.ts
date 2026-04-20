@@ -8,7 +8,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  // Auth guard — dashboard staff only
   const token = req.cookies.get('auth_token')?.value;
   const user  = token ? await verifyToken(token) : null;
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -24,7 +23,6 @@ export async function GET(
     return NextResponse.json({ error: 'Order not found' }, { status: 404 });
   }
 
-  // Build receipt data
   const items = (order.items as Array<{ name: string; quantity: number; price: number }>).map(i => ({
     name:      i.name,
     quantity:  i.quantity,
@@ -46,12 +44,10 @@ export async function GET(
     footerMessage:  'Merci pour votre commande! Thank you!',
   };
 
-  const format = req.nextUrl.searchParams.get('format') ?? 'base64';
-
   const receipt = buildReceipt(receiptData);
+  const format  = req.nextUrl.searchParams.get('format') ?? 'base64';
 
   if (format === 'raw') {
-    // Return raw bytes — suitable for a browser → WebUSB / WebSerial path
     return new NextResponse(receipt, {
       headers: {
         'Content-Type':        'application/octet-stream',
@@ -61,7 +57,6 @@ export async function GET(
     });
   }
 
-  // Default: base64 JSON — easy to consume from dashboard JS
   return NextResponse.json({
     orderNumber: order.order_number,
     bytes:       receipt.length,
