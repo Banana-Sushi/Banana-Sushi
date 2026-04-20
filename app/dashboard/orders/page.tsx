@@ -138,31 +138,6 @@ export default function OrdersPage() {
     setSelectedOrder(order);
   }, []);
 
-  const handleEscPosPrint = useCallback(async () => {
-    if (!selectedOrder) return;
-    try {
-      const apiRes = await fetch(`/api/orders/${selectedOrder.id}/receipt?format=raw`);
-      if (!apiRes.ok) throw new Error('Could not generate receipt');
-      const bytes = await apiRes.arrayBuffer();
-      const printRes = await fetch('http://localhost:9191/print', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: bytes,
-      });
-      if (!printRes.ok) {
-        const err = await printRes.json().catch(() => ({}));
-        throw new Error(err.error ?? 'Bridge error');
-      }
-      addToast('Receipt sent to printer ✓', 'success');
-    } catch (err: any) {
-      if (err?.message?.includes('fetch') || err?.name === 'TypeError') {
-        addToast('Print bridge not running — start print-bridge.js on the restaurant PC', 'error');
-      } else {
-        addToast(`Print error: ${err?.message ?? 'unknown'}`, 'error');
-      }
-    }
-  }, [selectedOrder, addToast]);
-
   const handlePrint = useCallback(() => {
     if (!selectedOrder) return;
 
@@ -597,10 +572,10 @@ export default function OrdersPage() {
                   </button>
                 )}
                 <button
-                  onClick={handleEscPosPrint}
-                  className="flex items-center gap-2 bg-black text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-800 transition-all"
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 bg-gray-100 text-black px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black hover:text-white transition-all"
                 >
-                  <Icons.Print /> Print
+                  <Icons.Print /> {t.dashboard.print}
                 </button>
               </div>
             </div>
