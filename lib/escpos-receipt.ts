@@ -265,7 +265,7 @@ export function buildReceipt(data: ReceiptData): Uint8Array {
   const footer = data.footerMessage ?? 'Thank you for your order!';
   push(line(footer));
   push(line(''));
-  push(line('www.banana-sushi.com'));
+  push(line('www.sushibanana.de'));
   push(bytes(LF, LF, LF));
 
   // ── 10. Partial cut ────────────────────────────────────────────────────────

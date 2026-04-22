@@ -191,9 +191,9 @@ export default function OrdersPage() {
   <div class="center" style="padding-bottom:10px;">
     <div class="xl heavy">Sushi Banana</div>
     <div class="sm" style="margin-top:2px;">· · · · · · · · · · · · · · · · · · · ·</div>
-    <div class="sm" style="margin-top:4px;">Sushi-Allee 42, 10115 Berlin</div>
+    <div class="sm" style="margin-top:4px;">Unter den Eichen 84A, 12205 Berlin</div>
     <div class="sm">Tel: +49 (0) 30 123 456 78</div>
-    <div class="sm">www.bananasushi.de</div>
+    <div class="sm">www.sushibanana.de</div>
   </div>
 
   <div class="dash"></div>
