@@ -56,7 +56,7 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
           </p>
           <hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0;">
           <p style="color:#d1d5db;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin:0;">
-            Sushi Banana · Sushi-Allee 42, 10115 Berlin
+            Unter den Eichen 84a, 12205 Berlin
           </p>
         </div>
       </div>
