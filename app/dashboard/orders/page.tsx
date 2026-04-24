@@ -6,21 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { Icons } from '@/components/Icons';
 import { Order } from '@/types';
 
-function playNotificationBeep() {
-  try {
-    const ctx = new AudioContext();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.frequency.value = 880;
-    oscillator.type = 'sine';
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.5);
-  } catch {}
-}
 
 function mapOrder(raw: any): Order {
   return {
@@ -100,7 +85,6 @@ export default function OrdersPage() {
         if (newOrder.status === 'pending') return; // wait for payment confirmation
         seenOrderIds.current.add(newOrder.id);
         setOrders(prev => [newOrder, ...prev]);
-        playNotificationBeep();
         setNewOrderIds(prev => new Set([...prev, newOrder.id]));
         const timer = setTimeout(() => {
           setNewOrderIds(prev => { const next = new Set(prev); next.delete(newOrder.id); return next; });
@@ -116,7 +100,6 @@ export default function OrdersPage() {
         if (isNew && updated.status === 'processing') {
           seenOrderIds.current.add(updated.id);
           setOrders(prev => [updated, ...prev]);
-          playNotificationBeep();
           setNewOrderIds(prev => new Set([...prev, updated.id]));
           const timer = setTimeout(() => {
             setNewOrderIds(prev => { const next = new Set(prev); next.delete(updated.id); return next; });
