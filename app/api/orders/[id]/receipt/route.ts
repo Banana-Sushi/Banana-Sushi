@@ -31,9 +31,10 @@ export async function GET(
 
   const receiptData: ReceiptData = {
     restaurantName: 'BANANA SUSHI',
-    addressLine1:   '123 Rue de la République',
-    addressLine2:   'Tunis, 1000',
-    phone:          '+216 XX XXX XXX',
+    addressLine1:   'Unter den Eichen 84A',
+    addressLine2:   '12205 Berlin',
+    phone:          '+49 (0) 30 60948970',
+    taxId:          '25/362/00331',
     orderNumber:    order.order_number,
     date:           new Date(order.created_at),
     items,

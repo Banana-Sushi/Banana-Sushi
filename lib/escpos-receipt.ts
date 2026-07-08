@@ -98,9 +98,9 @@ function pad(str: string, width: number, align: 'left' | 'right' | 'center' = 'l
  *   name col: dynamic, qty col: ~14, total col: 8
  */
 function itemRow(name: string, qty: number, unitPrice: number, total: number): Uint8Array[] {
-  const totalStr = `${total.toFixed(2)} TND`;
+  const totalStr = `${total.toFixed(2)} EUR`;
   const qtyStr   = `${qty} x ${unitPrice.toFixed(2)}`;
-  const rightCol = totalStr.length;          // e.g. "12.00 TND" = 9
+  const rightCol = totalStr.length;          // e.g. "12.00 EUR" = 9
   const midCol   = qtyStr.length + 1;        // e.g. "2 x 6.00 " = 10
   const nameCol  = LINE_WIDTH - midCol - rightCol - 2; // 2 spaces padding
 
@@ -154,6 +154,7 @@ export interface ReceiptData {
   addressLine1:   string;         // e.g. "123 Rue de la Paix"
   addressLine2?:  string;         // e.g. "75001 Paris"
   phone:          string;
+  taxId?:         string;         // e.g. "25/362/00331" (Steuer-ID)
   orderNumber:    string | number;
   date:           Date;
   items:          ReceiptItem[];
@@ -191,6 +192,7 @@ export function buildReceipt(data: ReceiptData): Uint8Array {
   push(line(data.addressLine1));
   if (data.addressLine2) push(line(data.addressLine2));
   push(line(`Tel: ${data.phone}`));
+  if (data.taxId) push(line(`Steuer-ID: ${data.taxId}`));
   push(bytes(LF));
 
   // ── 4. Separator ───────────────────────────────────────────────────────────
@@ -216,7 +218,7 @@ export function buildReceipt(data: ReceiptData): Uint8Array {
   cmd(CMD.BOLD_ON);
   // header: "ITEM                     QTY x PRICE   TOTAL"
   // fixed widths matching itemRow() calculation
-  const dummyTotal = '00.00 TND'; // 9 chars — establish column width
+  const dummyTotal = '00.00 EUR'; // 9 chars — establish column width
   const dummyQty   = 'QTY x PRICE';
   const rightCol   = dummyTotal.length;
   const midCol     = dummyQty.length + 1;
@@ -236,24 +238,24 @@ export function buildReceipt(data: ReceiptData): Uint8Array {
 
   // ── 8. Totals block (right-aligned) ───────────────────────────────────────
   cmd(CMD.ALIGN_LEFT);
-  push(summaryRow('Subtotal', `${data.subtotal.toFixed(2)} TND`));
+  push(summaryRow('Subtotal', `${data.subtotal.toFixed(2)} EUR`));
 
   if (data.deliveryFee !== undefined && data.deliveryFee > 0) {
-    push(summaryRow('Delivery fee', `${data.deliveryFee.toFixed(2)} TND`));
+    push(summaryRow('Delivery fee', `${data.deliveryFee.toFixed(2)} EUR`));
   } else if (data.deliveryFee === 0) {
     push(summaryRow('Delivery fee', 'FREE'));
   }
 
   if (data.taxRate && data.taxRate > 0) {
     const tax = data.subtotal * data.taxRate;
-    push(summaryRow(`Tax (${(data.taxRate * 100).toFixed(0)}%)`, `${tax.toFixed(2)} TND`));
+    push(summaryRow(`Tax (${(data.taxRate * 100).toFixed(0)}%)`, `${tax.toFixed(2)} EUR`));
   }
 
   push(line('-'.repeat(LINE_WIDTH)));
 
   // Grand total — bold
   cmd(CMD.BOLD_ON);
-  push(summaryRow('TOTAL', `${data.total.toFixed(2)} TND`));
+  push(summaryRow('TOTAL', `${data.total.toFixed(2)} EUR`));
   cmd(CMD.BOLD_OFF);
 
   push(line('-'.repeat(LINE_WIDTH)));
