@@ -175,8 +175,9 @@ export default function OrdersPage() {
     <div class="xl heavy">Sushi Banana</div>
     <div class="sm" style="margin-top:2px;">· · · · · · · · · · · · · · · · · · · ·</div>
     <div class="sm" style="margin-top:4px;">Unter den Eichen 84A, 12205 Berlin</div>
-    <div class="sm">Tel: +49 (0) 30 123 456 78</div>
+    <div class="sm">Tel: +49 (0) 30 60948970</div>
     <div class="sm">www.sushibanana.de</div>
+    <div class="sm">Steuer-ID: 25/362/00331</div>
   </div>
 
   <div class="dash"></div>
