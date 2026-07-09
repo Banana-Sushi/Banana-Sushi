@@ -26,6 +26,9 @@ function mapOrder(raw: any): Order {
     stripeSessionId: raw.stripe_session_id,
     createdAt: raw.created_at,
     acknowledgedAt: raw.acknowledged_at ?? null,
+    scheduledTime: raw.scheduled_time ?? null,
+    couponCode: raw.coupon?.code ?? null,
+    couponDiscount: Number(raw.coupon_discount ?? 0),
   };
 }
 
@@ -33,7 +36,27 @@ function isPickupOrder(order: Order) {
   return order.paymentMethod === 'pickup_online' || order.paymentMethod === 'pickup_cash';
 }
 
+function isScheduledFuture(scheduledTime: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(scheduledTime);
+  d.setHours(0, 0, 0, 0);
+  return d > today;
+}
+
+function formatScheduledTime(dt: string): string {
+  const d = new Date(dt);
+  return (
+    d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' }) +
+    ' · ' +
+    d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  );
+}
+
 function OrderStatusPill({ order }: { order: Order }) {
+  if (order.scheduledTime && isScheduledFuture(order.scheduledTime)) {
+    return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-purple-50 text-purple-500">Scheduled</span>;
+  }
   if (order.status === 'completed') {
     return <span className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase bg-green-50 text-green-500">Completed</span>;
   }
@@ -47,6 +70,7 @@ function OrderStatusPill({ order }: { order: Order }) {
 }
 
 function orderBarColor(order: Order) {
+  if (order.scheduledTime && isScheduledFuture(order.scheduledTime)) return 'bg-purple-400';
   if (order.status === 'completed') return 'bg-green-500';
   if (order.status === 'ready_for_pickup') return 'bg-blue-400';
   if (!order.acknowledgedAt) return 'bg-red-400';
@@ -81,36 +105,33 @@ export default function OrdersPage() {
     const channel = supabase
       .channel('orders-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-        const newOrder = mapOrder(payload.new);
-        if (newOrder.status === 'pending') return; // wait for payment confirmation
-        seenOrderIds.current.add(newOrder.id);
-        setOrders(prev => [newOrder, ...prev]);
-        setNewOrderIds(prev => new Set([...prev, newOrder.id]));
-        const timer = setTimeout(() => {
-          setNewOrderIds(prev => { const next = new Set(prev); next.delete(newOrder.id); return next; });
-          newOrderTimers.current.delete(newOrder.id);
-        }, 2500);
-        newOrderTimers.current.set(newOrder.id, timer);
+        const raw = payload.new as any;
+        if (raw?.status === 'pending') return;
+        fetchOrders();
+        if (raw?.id && !seenOrderIds.current.has(raw.id)) {
+          seenOrderIds.current.add(raw.id);
+          setNewOrderIds(prev => new Set([...prev, raw.id]));
+          const timer = setTimeout(() => {
+            setNewOrderIds(prev => { const next = new Set(prev); next.delete(raw.id); return next; });
+            newOrderTimers.current.delete(raw.id);
+          }, 2500);
+          newOrderTimers.current.set(raw.id, timer);
+        }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
-        const updated = mapOrder(payload.new);
-        if (updated.status === 'pending') return;
-
-        const isNew = !seenOrderIds.current.has(updated.id);
-        if (isNew && updated.status === 'processing') {
-          seenOrderIds.current.add(updated.id);
-          setOrders(prev => [updated, ...prev]);
-          setNewOrderIds(prev => new Set([...prev, updated.id]));
+        const raw = payload.new as any;
+        if (raw?.status === 'pending') return;
+        fetchOrders();
+        const id = raw?.id;
+        if (id && !seenOrderIds.current.has(id) && raw.status === 'processing') {
+          seenOrderIds.current.add(id);
+          setNewOrderIds(prev => new Set([...prev, id]));
           const timer = setTimeout(() => {
-            setNewOrderIds(prev => { const next = new Set(prev); next.delete(updated.id); return next; });
-            newOrderTimers.current.delete(updated.id);
+            setNewOrderIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+            newOrderTimers.current.delete(id);
           }, 2500);
-          newOrderTimers.current.set(updated.id, timer);
-          return;
+          newOrderTimers.current.set(id, timer);
         }
-
-        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-        setSelectedOrder(prev => prev?.id === updated.id ? updated : prev);
       })
       .subscribe();
 
@@ -263,9 +284,18 @@ export default function OrdersPage() {
   }, [selectedOrder]);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return orders;
-    if (filter === 'processing') return orders.filter(o => o.status === 'processing' || o.status === 'ready_for_pickup');
-    return orders.filter(o => o.status === filter);
+    const complete = orders.filter(o => o.status !== 'pending');
+    let list = complete;
+    if (filter === 'processing') list = complete.filter(o => o.status === 'processing' || o.status === 'ready_for_pickup');
+    else if (filter !== 'all') list = complete.filter(o => o.status === filter);
+    return [...list].sort((a, b) => {
+      const aFuture = a.scheduledTime ? isScheduledFuture(a.scheduledTime) : false;
+      const bFuture = b.scheduledTime ? isScheduledFuture(b.scheduledTime) : false;
+      if (aFuture && bFuture) return new Date(a.scheduledTime!).getTime() - new Date(b.scheduledTime!).getTime();
+      if (aFuture) return -1;
+      if (bFuture) return 1;
+      return 0;
+    });
   }, [orders, filter]);
 
   const counts = useMemo(() => ({
@@ -371,13 +401,21 @@ export default function OrdersPage() {
                 <p className="text-[9px] font-black text-gray-300 uppercase">
                   {order.orderNumber} · {new Date(order.createdAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
                 </p>
-                {!order.acknowledgedAt && order.status === 'processing' && (
+                {order.scheduledTime && isScheduledFuture(order.scheduledTime) ? (
+                  <span className="text-[8px] font-black uppercase tracking-widest bg-purple-400 text-white px-2 py-1 rounded-lg">SCHEDULED</span>
+                ) : (!order.acknowledgedAt && order.status === 'processing') ? (
                   <span className="text-[8px] font-black uppercase tracking-widest bg-red-400 text-white px-2 py-1 rounded-lg animate-fade-in">NEW</span>
-                )}
+                ) : null}
               </div>
-              <h3 className="text-xl font-black uppercase mb-3 truncate">{order.customerName}</h3>
+              <h3 className="text-xl font-black uppercase mb-1 truncate">{order.customerName}</h3>
+              {order.scheduledTime ? (
+                <p className={`flex items-center gap-1 text-[9px] font-black uppercase mb-3 ${isScheduledFuture(order.scheduledTime) ? 'text-purple-500' : 'text-yellow-600'}`}>
+                  <Icons.Clock />
+                  {formatScheduledTime(order.scheduledTime)}
+                </p>
+              ) : <div className="mb-3" />}
               <ul className="mb-5 space-y-2">
-                {order.items.map((item: any, i: number) => {
+                {(order.items ?? []).map((item: any, i: number) => {
                   const addons = [
                     ...((item.selectedMandatoryAddons ?? []) as any[]),
                     ...((item.selectedOptionalAddons ?? []) as any[]),
@@ -468,6 +506,17 @@ export default function OrdersPage() {
                   )}
                   {selectedOrder.deliveryNote && <p className="text-gray-400 mt-1 italic font-bold">{selectedOrder.deliveryNote}</p>}
                 </div>
+                {selectedOrder.scheduledTime && (
+                  <div className="col-span-2 border-t border-gray-100 pt-4 mt-2 flex items-center gap-2">
+                    <Icons.Clock />
+                    <div>
+                      <p className="text-gray-300 mb-0.5">Gewünschte Zeit</p>
+                      <p className={`text-sm ${isScheduledFuture(selectedOrder.scheduledTime) ? 'text-purple-500' : ''}`}>
+                        {formatScheduledTime(selectedOrder.scheduledTime)}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Payment */}
@@ -526,6 +575,12 @@ export default function OrdersPage() {
                   <span>Delivery</span>
                   <span>{selectedOrder.deliveryFee.toFixed(2)}€</span>
                 </div>
+                {selectedOrder.couponCode && (
+                  <div className="flex justify-between text-[11px] font-black uppercase text-green-500">
+                    <span>Coupon</span>
+                    <span>-{(selectedOrder.couponDiscount ?? 0).toFixed(2)}€</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-black text-2xl tracking-tighter pt-3 border-t border-gray-100">
                   <span>TOTAL</span>
                   <span>{selectedOrder.total.toFixed(2)}€</span>
