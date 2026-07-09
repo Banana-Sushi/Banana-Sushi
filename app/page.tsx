@@ -12,7 +12,7 @@ export default async function HomePage() {
       .from('menu_items')
       .select('*')
       .eq('is_available', true)
-      .or('is_featured.eq.true,discount_type.not.is.null')
+      .eq('is_featured', true)
       .limit(8),
     supabase.from('site_content').select('key, value'),
   ]);
@@ -28,17 +28,7 @@ export default async function HomePage() {
     isFeatured: item.is_featured,
     addonsOptional: item.addons_optional ?? [],
     addonsMandatory: item.addons_mandatory ?? [],
-    discountType: item.discount_type ?? null,
-    discountValue: item.discount_value != null ? Number(item.discount_value) : null,
-  })).sort((a: MenuItem, b: MenuItem) => {
-    const discountAmount = (item: MenuItem) => {
-      if (!item.discountType || !item.discountValue) return 0;
-      return item.discountType === 'percentage'
-        ? item.price * (item.discountValue / 100)
-        : item.discountValue;
-    };
-    return discountAmount(b) - discountAmount(a);
-  });
+  }));
 
   const content: Record<string, string> = {};
   for (const row of contentRes.data ?? []) content[row.key] = row.value;
