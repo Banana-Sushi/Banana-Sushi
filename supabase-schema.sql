@@ -28,13 +28,13 @@ CREATE TABLE IF NOT EXISTS orders (
   order_number      TEXT        UNIQUE NOT NULL,
   customer_name     TEXT        NOT NULL,
   phone             TEXT        NOT NULL,
-  address           TEXT        NOT NULL,
-  zip_code          TEXT        NOT NULL,
-  city              TEXT        NOT NULL,
+  address           TEXT,
+  zip_code          TEXT,
+  city              TEXT,
   delivery_note     TEXT,
-  payment_method    TEXT        NOT NULL CHECK (payment_method IN ('online','cash')),
+  payment_method    TEXT        NOT NULL CHECK (payment_method IN ('online','cash','pickup_online','pickup_cash')),
   status            TEXT        NOT NULL DEFAULT 'processing'
-                                CHECK (status IN ('processing','completed')),
+                                CHECK (status IN ('pending','processing','ready_for_pickup','completed')),
   items             JSONB       NOT NULL,
   subtotal          DECIMAL(10,2) NOT NULL,
   delivery_fee      DECIMAL(10,2) NOT NULL DEFAULT 2.90,
@@ -63,6 +63,65 @@ CREATE TABLE IF NOT EXISTS staff_users (
 -- 5. Enable Realtime for orders (so dashboard gets live updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE orders;
 
+-- 6. Discounts (product / category / global / command promotional discounts)
+-- Run this block to reset discounts to the new schema:
+DROP TABLE IF EXISTS discounts;
+
+CREATE TABLE discounts (
+  id               UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
+  section          TEXT          NOT NULL CHECK (section IN ('product','category','global','command')),
+  menu_item_id     UUID          REFERENCES menu_items(id) ON DELETE CASCADE,
+  category_name    TEXT,
+  discount_type    TEXT          NOT NULL CHECK (discount_type IN ('percentage','fixed','two_for_one')),
+  discount_value   DECIMAL(10,2),
+  min_order_total  DECIMAL(10,2),
+  start_date       TIMESTAMPTZ,
+  end_date         TIMESTAMPTZ,
+  is_active        BOOLEAN       NOT NULL DEFAULT true,
+  created_at       TIMESTAMPTZ   DEFAULT NOW()
+);
+
+-- 7. Scheduled time for orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_time TEXT;
+
+-- 8. Coupons
+CREATE TABLE IF NOT EXISTS coupons (
+  id              UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
+  code            TEXT          UNIQUE NOT NULL,
+  discount_type   TEXT          NOT NULL CHECK (discount_type IN ('percentage','fixed')),
+  discount_value  DECIMAL(10,2) NOT NULL,
+  min_order_total DECIMAL(10,2),
+  start_date      TIMESTAMPTZ,
+  end_date        TIMESTAMPTZ,
+  is_active       BOOLEAN       NOT NULL DEFAULT true,
+  uses_limit      INTEGER       NOT NULL,
+  uses_count      INTEGER       NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ   DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS coupon_uses (
+  id                  UUID  DEFAULT gen_random_uuid() PRIMARY KEY,
+  coupon_id           UUID  REFERENCES coupons(id) ON DELETE CASCADE,
+  order_id            UUID  REFERENCES orders(id) ON DELETE CASCADE,
+  customer_identifier TEXT  NOT NULL,
+  used_at             TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add coupon columns to orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_id UUID REFERENCES coupons(id);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount DECIMAL(10,2) DEFAULT 0;
+
+-- RPC to atomically increment coupon uses_count
+CREATE OR REPLACE FUNCTION increment_coupon_uses(coupon_id_param UUID)
+RETURNS void LANGUAGE sql AS $$
+  UPDATE coupons SET uses_count = uses_count + 1 WHERE id = coupon_id_param;
+$$;
+
+-- Grant access (SQL Editor does not auto-grant unlike Table Editor)
+GRANT ALL ON TABLE coupons     TO postgres, anon, authenticated, service_role;
+GRANT ALL ON TABLE coupon_uses TO postgres, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION increment_coupon_uses(UUID) TO postgres, anon, authenticated, service_role;
+
 -- ============================================================
 --  ROW LEVEL SECURITY
 -- ============================================================
@@ -87,6 +146,62 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
+--  CUSTOMER ACCOUNTS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS customers (
+  id                        UUID    DEFAULT gen_random_uuid() PRIMARY KEY,
+  first_name                TEXT    NOT NULL,
+  last_name                 TEXT    NOT NULL,
+  email                     TEXT    UNIQUE NOT NULL,
+  email_verified            BOOLEAN DEFAULT false,
+  email_verification_token  TEXT,
+  password_hash             TEXT    NOT NULL,
+  gender                    TEXT    CHECK (gender IN ('male','female','other','prefer_not_to_say')),
+  birthdate                 DATE,
+  phone                     TEXT,
+  marketing_consent         BOOLEAN DEFAULT false,
+  discount_emails_consent   BOOLEAN DEFAULT false,
+  created_at                TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS customer_addresses (
+  id          UUID    DEFAULT gen_random_uuid() PRIMARY KEY,
+  customer_id UUID    REFERENCES customers(id) ON DELETE CASCADE,
+  label       TEXT,
+  street      TEXT    NOT NULL,
+  zip_code    TEXT    NOT NULL,
+  city        TEXT    NOT NULL,
+  is_main     BOOLEAN DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS discount_emails_consent BOOLEAN DEFAULT false;
+
+GRANT ALL ON TABLE customers          TO postgres, anon, authenticated, service_role;
+GRANT ALL ON TABLE customer_addresses TO postgres, anon, authenticated, service_role;
+
+-- ============================================================
+--  MIGRATION: Fix pickup orders & Stripe pending status
+--  Run these in Supabase SQL Editor if upgrading an existing DB
+-- ============================================================
+-- Allow NULL address/zip/city for pickup orders
+ALTER TABLE orders ALTER COLUMN address  DROP NOT NULL;
+ALTER TABLE orders ALTER COLUMN zip_code DROP NOT NULL;
+ALTER TABLE orders ALTER COLUMN city     DROP NOT NULL;
+
+-- Allow pickup_online / pickup_cash payment methods
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
+ALTER TABLE orders ADD CONSTRAINT orders_payment_method_check
+  CHECK (payment_method IN ('online','cash','pickup_online','pickup_cash'));
+
+-- Allow 'pending' status (used by Stripe flow before payment completes)
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
+ALTER TABLE orders ADD CONSTRAINT orders_status_check
+  CHECK (status IN ('pending','processing','ready_for_pickup','completed'));
+
+-- ============================================================
 --  CREATE YOUR FIRST STAFF ACCOUNT
 --  1. Go to https://bcrypt-generator.com
 --  2. Enter your password, use 12 rounds
@@ -96,6 +211,17 @@ ON CONFLICT DO NOTHING;
 -- VALUES (
 --   'staff@banana-sushi.de',
 --   '$2a$12$REPLACE_WITH_BCRYPT_HASH',
---   'Staff Name',
+--   'Staff Name',ba
 --   'staff'
 -- );
+
+-- Financial Reports
+CREATE TABLE IF NOT EXISTS financial_reports (
+  id           UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
+  start_date   DATE          NOT NULL,
+  end_date     DATE          NOT NULL,
+  generated_at TIMESTAMPTZ   DEFAULT NOW(),
+  generated_by TEXT          NOT NULL,
+  report_data  JSONB         NOT NULL
+);
+GRANT ALL ON TABLE financial_reports TO postgres, anon, authenticated, service_role;

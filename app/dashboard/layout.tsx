@@ -3,6 +3,7 @@ import { verifyToken } from '@/lib/auth';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardSidebarMobile } from '@/components/dashboard/DashboardSidebarMobile';
 import { DashboardNotificationProvider } from '@/components/dashboard/DashboardNotificationProvider';
+import { DashboardOrdersProvider } from '@/context/DashboardOrdersContext';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -12,11 +13,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen bg-gray-50 selection:bg-yellow-200">
-      <DashboardSidebar role={role} />
-      <DashboardSidebarMobile role={role} />
-      <DashboardNotificationProvider>
-        <div className="animate-fade-in">{children}</div>
-      </DashboardNotificationProvider>
+      <DashboardOrdersProvider>
+        <DashboardSidebar role={role} />
+        <DashboardSidebarMobile role={role} />
+        <DashboardNotificationProvider>
+          <div className="animate-fade-in">{children}</div>
+        </DashboardNotificationProvider>
+      </DashboardOrdersProvider>
     </div>
   );
 }

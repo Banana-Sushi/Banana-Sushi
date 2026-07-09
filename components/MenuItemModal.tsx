@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { Addon, MenuItem, getDiscountedPrice } from '@/types';
+import { Addon, MenuItem, getDiscountedPrice, getAppliedItemDiscount } from '@/types';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from './Icons';
 
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export const MenuItemModal = ({ item, onClose }: Props) => {
-  const { lang, t, addToCart } = useAppContext();
+  const { lang, t, addToCart, discounts } = useAppContext();
   const [selectedOptional, setSelectedOptional] = useState<Addon[]>([]);
   const [selectedMandatory, setSelectedMandatory] = useState<Addon[]>([]);
   const [validationError, setValidationError] = useState('');
@@ -23,7 +23,8 @@ export const MenuItemModal = ({ item, onClose }: Props) => {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const discountedBase = getDiscountedPrice(item);
+  const appliedDiscount = getAppliedItemDiscount(item, discounts);
+  const discountedBase = getDiscountedPrice(item, discounts);
   const hasDiscount = discountedBase < item.price;
   const addonTotal =
     selectedMandatory.reduce((s, a) => s + a.price, 0) +
@@ -62,7 +63,13 @@ export const MenuItemModal = ({ item, onClose }: Props) => {
       >
         {/* Image */}
         <div className="relative h-56 w-full shrink-0">
-          <Image src={item.image} alt={item.name[lang]} fill className="object-cover" sizes="448px" />
+          {item.image ? (
+            <Image src={item.image} alt={item.name[lang]} fill className="object-cover" sizes="448px" />
+          ) : (
+            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+              <span className="text-gray-300 text-5xl">🍽</span>
+            </div>
+          )}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-xl flex items-center justify-center hover:bg-white transition-all shadow-lg"
@@ -77,11 +84,11 @@ export const MenuItemModal = ({ item, onClose }: Props) => {
             <span className="text-sm font-black">{totalPrice.toFixed(2)}€</span>
           </div>
           {/* Discount badge */}
-          {hasDiscount && (
+          {hasDiscount && appliedDiscount && (
             <div className="absolute bottom-4 left-4 bg-yellow-500 text-black px-2 py-1 rounded-xl text-[8px] font-black uppercase">
-              {item.discountType === 'percentage'
-                ? `-${item.discountValue}%`
-                : `-${item.discountValue?.toFixed(2)}€`}
+              {appliedDiscount.discountType === 'percentage'
+                ? `-${appliedDiscount.discountValue}%`
+                : `-${appliedDiscount.discountValue?.toFixed(2)}€`}
             </div>
           )}
         </div>

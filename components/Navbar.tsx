@@ -16,6 +16,7 @@ export const Navbar = () => {
 
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [customerFirstName, setCustomerFirstName] = useState<string | null>(null);
 
   const totalItems = cart.reduce((acc, c) => acc + c.quantity, 0);
 
@@ -28,6 +29,13 @@ export const Navbar = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  useEffect(() => {
+    fetch('/api/customer/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setCustomerFirstName(data?.customer?.first_name ?? null))
+      .catch(() => setCustomerFirstName(null));
+  }, [pathname]);
 
   const scrollTo = (id: string) => {
     if (pathname !== '/') { window.location.href = `/#${id}`; return; }
@@ -56,10 +64,30 @@ export const Navbar = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 md:gap-6">
+      <div className="flex items-center gap-3 md:gap-4">
         <button onClick={() => setLang(lang === 'de' ? 'en' : 'de')} className="text-[11px] font-black text-gray-400 hover:text-black uppercase tracking-[0.2em] p-1.5 transition-colors">
           {lang === 'de' ? 'EN' : 'DE'}
         </button>
+
+        {/* Customer account button */}
+        {customerFirstName ? (
+          <Link
+            href="/account"
+            className="flex items-center gap-1.5 text-[11px] font-black text-gray-600 hover:text-black transition-colors uppercase tracking-[0.15em]"
+          >
+            <Icons.User />
+            <span className="hidden sm:inline">{customerFirstName}</span>
+          </Link>
+        ) : (
+          <Link
+            href="/account/login"
+            className="flex items-center gap-1.5 text-[11px] font-black text-gray-400 hover:text-black transition-colors uppercase tracking-[0.15em]"
+          >
+            <Icons.User />
+            <span className="hidden sm:inline">{t.account.login}</span>
+          </Link>
+        )}
+
         <Link href="/order" className="group relative bg-black text-white px-5 md:px-7 py-2.5 md:py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-all flex items-center gap-2">
           <Icons.Cart />
           <span className="hidden sm:inline">{t.nav.orderNow}</span>

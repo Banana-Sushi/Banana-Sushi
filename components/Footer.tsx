@@ -31,7 +31,7 @@ export const Footer = () => {
       .catch(() => {});
   }, []);
 
-  if (pathname.startsWith('/dashboard')) return null;
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/account')) return null;
 
   return (
     <footer className="bg-black text-white print:hidden">
@@ -100,6 +100,17 @@ export const Footer = () => {
           <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">
             © {new Date().getFullYear()} Sushi Banana · {t.footer.rights}
           </p>
+          <div className="flex gap-6">
+            <Link href="/agb" className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-white transition-colors">
+              AGB
+            </Link>
+            <Link href="/impressum" className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-white transition-colors">
+              {t.footer.impressum}
+            </Link>
+            <Link href="/privacy" className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-white transition-colors">
+              {t.footer.privacy}
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

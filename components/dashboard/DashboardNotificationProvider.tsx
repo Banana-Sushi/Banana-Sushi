@@ -1,33 +1,44 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useDashboardOrders } from '@/context/DashboardOrdersContext';
 
-export function playAlert() {
+// Chrome mutes any AudioContext created outside of a user gesture (e.g. from
+// a WebSocket callback firing when a new order arrives). Reusing one
+// instance that was unlocked by an earlier click/keydown keeps it audible
+// for the rest of the tab's lifetime.
+let audioContext: AudioContext | null = null;
+
+function unlockAudioContext() {
+  if (!audioContext) audioContext = new AudioContext();
+}
+
+function playTone(ctx: AudioContext, freq: number, start: number, duration: number, volume: number) {
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+  oscillator.type = 'sine';
+  oscillator.frequency.value = freq;
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+  oscillator.start(start);
+  oscillator.stop(start + duration);
+}
+
+export function playOrderBeep() {
   try {
-    const ctx = new AudioContext();
-
-    function tone(freq: number, start: number, duration: number, vol: number) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(vol, start + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
-      osc.start(start);
-      osc.stop(start + duration);
-    }
-
-    const t = ctx.currentTime;
-    tone(880,  t,        0.6, 0.4);  // A5 — first tone
-    tone(1320, t + 0.55, 1.4, 0.35); // E6 — second tone, higher, long decay
+    const ctx = audioContext ?? (audioContext = new AudioContext());
+    const now = ctx.currentTime;
+    playTone(ctx, 880,  now,        0.6, 0.4);  // A5 — first tone
+    playTone(ctx, 1320, now + 0.55, 1.4, 0.35); // E6 — second tone, higher, long decay
   } catch {}
 }
 
-function showBrowserNotification(orderNumber: string, customerName: string) {
+function notifyDesktop(orderNumber: string, customerName: string) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
   new Notification('New Order!', {
@@ -37,35 +48,55 @@ function showBrowserNotification(orderNumber: string, customerName: string) {
   });
 }
 
+// An order becomes something staff needs to act on exactly once:
+// - Cash / pickup-cash orders are inserted directly with status 'processing'.
+// - Online / pickup-online orders are inserted as 'pending' and only flip to
+//   'processing' once Stripe's webhook confirms payment succeeded.
+// Either way, the first time an order's status is 'processing' is the moment
+// to alert — regardless of which payment option the customer picked.
+function isNewlyProcessing(order: { status?: string }): boolean {
+  return order.status === 'processing';
+}
+
 export function DashboardNotificationProvider({ children }: { children: React.ReactNode }) {
-  const seenIds = useRef<Set<string>>(new Set());
+  const alertedOrderIds = useRef<Set<string>>(new Set());
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  const { markNewOrder } = useDashboardOrders();
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
 
+    document.addEventListener('click', unlockAudioContext);
+    document.addEventListener('keydown', unlockAudioContext);
+
+    const alertOnce = (order: any) => {
+      if (!order?.id || !isNewlyProcessing(order) || alertedOrderIds.current.has(order.id)) return;
+      alertedOrderIds.current.add(order.id);
+      playOrderBeep();
+      if (pathnameRef.current !== '/dashboard/orders') markNewOrder();
+      if (order.order_number && order.customer_name) {
+        notifyDesktop(order.order_number, order.customer_name);
+      }
+    };
+
     const channel = supabase
-      .channel('dashboard-global-orders')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-        const o = payload.new as any;
-        if (o.status === 'pending') return;
-        if (seenIds.current.has(o.id)) return;
-        seenIds.current.add(o.id);
-        playAlert();
-        showBrowserNotification(o.order_number, o.customer_name);
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
-        const o = payload.new as any;
-        if (seenIds.current.has(o.id)) return;
-        if (o.status !== 'processing') return;
-        seenIds.current.add(o.id);
-        playAlert();
-        showBrowserNotification(o.order_number, o.customer_name);
-      })
+      .channel('dashboard-order-alerts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, ({ new: order }) => alertOnce(order))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, ({ new: order }) => alertOnce(order))
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      document.removeEventListener('click', unlockAudioContext);
+      document.removeEventListener('keydown', unlockAudioContext);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return <>{children}</>;

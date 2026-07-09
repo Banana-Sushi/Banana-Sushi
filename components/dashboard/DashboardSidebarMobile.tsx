@@ -1,14 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
+import { useDashboardOrders } from '@/context/DashboardOrdersContext';
 import { Icons } from '../Icons';
 
 export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | null }) => {
   const { t, lang, setLang } = useAppContext();
   const pathname = usePathname();
   const router = useRouter();
+  const { hasNewOrder, clearNewOrder } = useDashboardOrders();
+
+  useEffect(() => {
+    if (pathname === '/dashboard/orders') clearNewOrder();
+  }, [pathname, clearNewOrder]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -20,6 +27,8 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
     { to: '/dashboard/history', label: t.dashboard.history, icon: <Icons.Cart />, adminOnly: false },
     { to: '/dashboard/stats', label: t.dashboard.stats, icon: <Icons.Stats />, adminOnly: true },
     { to: '/dashboard/menu', label: t.dashboard.menuMgmt, icon: <Icons.Edit />, adminOnly: true },
+    { to: '/dashboard/discounts', label: t.dashboard.discounts, icon: <Icons.Percent />, adminOnly: true },
+    { to: '/dashboard/gutschein', label: t.dashboard.gutschein, icon: <Icons.Ticket />, adminOnly: true },
     { to: '/dashboard/content', label: 'Content', icon: <Icons.Content />, adminOnly: true },
     { to: '/dashboard/staff', label: t.dashboard.staff, icon: <Icons.Users />, adminOnly: true },
     { to: '/dashboard/qrcode', label: t.dashboard.qrCode, icon: <Icons.QRCode />, adminOnly: true },
@@ -37,7 +46,12 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
             href={link.to}
             className={`flex flex-col items-center gap-1 ${pathname === link.to ? 'text-black' : 'text-gray-300'}`}
           >
-            {link.icon}
+            <div className="relative">
+              {link.icon}
+              {link.to === '/dashboard/orders' && hasNewOrder && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white animate-pulse" />
+              )}
+            </div>
             <span className="text-[7px] font-black uppercase tracking-widest">{link.label}</span>
           </Link>
         ))}
