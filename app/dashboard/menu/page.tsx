@@ -23,15 +23,12 @@ interface RawMenuItem {
   is_featured: boolean;
   addons_optional: AddonField[];
   addons_mandatory: AddonField[];
-  discount_type: 'percentage' | 'fixed' | '';
-  discount_value: string;
 }
 
 const EMPTY_FORM: Omit<RawMenuItem, 'id'> = {
   name_de: '', name_en: '', description_de: '', description_en: '',
   price: '', category: 'Sushi', image: '', is_available: true, is_featured: false,
   addons_optional: [], addons_mandatory: [],
-  discount_type: '', discount_value: '',
 };
 
 const CATEGORIES = ['Menüs', 'Vegetarische Menüs', 'Sushi Platten', 'Sushi Burger', 'Vorspeisen', 'Warme Suppen', 'Poke Bowl', 'Sommerrollen', 'Wok-Gerichte', 'Glasnudelsalat', 'Makis', 'Temaki', 'Nigiri', 'Inside Out Rolls', 'Inside Out Rolls (vegetarisch)', 'Spezial Rolls', 'Sashimi', 'Golden Rolls', 'Mini Golden Rolls', 'Desserts', 'Extras & Beilagen', 'Drinks'];
@@ -69,8 +66,6 @@ export default function MenuManagementPage() {
       is_available: item.is_available, is_featured: item.is_featured,
       addons_optional: (item.addons_optional ?? []).map((a: any) => ({ name: a.name, price: String(a.price) })),
       addons_mandatory: (item.addons_mandatory ?? []).map((a: any) => ({ name: a.name, price: String(a.price) })),
-      discount_type: (item.discount_type as any) || '',
-      discount_value: (item.discount_value as any) != null ? String(item.discount_value) : '',
     });
     setEditingId(item.id);
     setShowModal(true);
@@ -151,8 +146,6 @@ export default function MenuManagementPage() {
       const payload = {
         ...form,
         price: parseFloat(String(form.price)) || 0,
-        discount_type: form.discount_type || null,
-        discount_value: form.discount_type && form.discount_value !== '' ? Number(form.discount_value) : null,
         addons_optional: form.addons_optional
           .filter((a: AddonField) => a.name.trim())
           .map((a: AddonField) => ({ name: a.name.trim(), price: Number(a.price) || 0 })),
@@ -233,12 +226,6 @@ export default function MenuManagementPage() {
                   <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-sm font-black shadow-lg">
                     {Number(item.price).toFixed(2)}€
                   </div>
-                  {/* Discount badge */}
-                  {item.discount_type && (
-                    <div className="absolute top-3 left-3 bg-yellow-500 text-black px-2.5 py-1 rounded-xl text-[9px] font-black uppercase shadow">
-                      {item.discount_type === 'percentage' ? `${item.discount_value}% off` : `${Number(item.discount_value).toFixed(2)}€ off`}
-                    </div>
-                  )}
                   {/* Unavailable overlay */}
                   {!item.is_available && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -331,38 +318,6 @@ export default function MenuManagementPage() {
                     {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
-              </div>
-
-              {/* Discount */}
-              <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
-                <label className="text-[9px] font-black uppercase text-gray-500">Discount (optional)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <select
-                    value={form.discount_type}
-                    onChange={e => setForm({ ...form, discount_type: e.target.value as any, discount_value: '' })}
-                    className="p-3 bg-white rounded-xl border-none outline-none font-bold text-sm"
-                  >
-                    <option value="">No Discount</option>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount (€)</option>
-                  </select>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder={form.discount_type === 'percentage' ? 'e.g. 10' : 'e.g. 2.00'}
-                    value={form.discount_value}
-                    onChange={e => setForm({ ...form, discount_value: e.target.value })}
-                    disabled={!form.discount_type}
-                    className="p-3 bg-white rounded-xl border-none outline-none font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                  />
-                </div>
-                {form.discount_type && form.discount_value && (
-                  <p className="text-[9px] font-black text-green-600 uppercase">
-                    {form.discount_type === 'percentage'
-                      ? `Customer pays: ${(Number(form.price) * (1 - Number(form.discount_value) / 100)).toFixed(2)}€`
-                      : `Customer pays: ${Math.max(0, Number(form.price) - Number(form.discount_value)).toFixed(2)}€`}
-                  </p>
-                )}
               </div>
 
               {/* Mandatory Add-ons */}

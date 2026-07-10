@@ -16,18 +16,48 @@ export interface MenuItem {
   isFeatured?: boolean;
   addonsOptional?: Addon[];
   addonsMandatory?: Addon[];
-  discountType?: 'percentage' | 'fixed' | null;
-  discountValue?: number | null;
 }
 
-/** Returns the base price after applying any discount. */
-export function getDiscountedPrice(item: MenuItem): number {
-  const base = item.price;
-  if (!item.discountType || !item.discountValue) return base;
-  if (item.discountType === 'percentage') {
-    return Math.round(base * (1 - item.discountValue / 100) * 100) / 100;
+export interface Discount {
+  id: string;
+  section: 'product' | 'category' | 'global' | 'command';
+  menuItemId: string | null;
+  categoryName: string | null;
+  discountType: 'percentage' | 'fixed' | 'two_for_one';
+  discountValue: number | null;
+  minOrderTotal: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  isActive: boolean;
+}
+
+function isDiscountActive(d: Discount): boolean {
+  const now = new Date();
+  return (
+    d.isActive &&
+    (!d.startDate || new Date(d.startDate) <= now) &&
+    (!d.endDate || new Date(d.endDate) >= now)
+  );
+}
+
+export function getAppliedItemDiscount(item: MenuItem, discounts: Discount[]): Discount | null {
+  return (
+    discounts.find(d => d.section === 'product' && d.menuItemId === item.id && isDiscountActive(d)) ??
+    discounts.find(d => d.section === 'category' && d.categoryName === item.category && isDiscountActive(d)) ??
+    discounts.find(d => d.section === 'global' && isDiscountActive(d)) ??
+    null
+  );
+}
+
+export function getDiscountedPrice(item: MenuItem, discounts: Discount[]): number {
+  const matched = getAppliedItemDiscount(item, discounts);
+  if (!matched) return item.price;
+  if (matched.discountType === 'two_for_one') return item.price;
+  if (matched.discountType === 'fixed') return Math.max(0, item.price - (matched.discountValue ?? 0));
+  if (matched.discountType === 'percentage') {
+    return Math.round(item.price * (1 - (matched.discountValue ?? 0) / 100) * 100) / 100;
   }
-  return Math.max(0, Math.round((base - item.discountValue) * 100) / 100);
+  return item.price;
 }
 
 export type OrderStatus = 'pending' | 'processing' | 'ready_for_pickup' | 'completed';
@@ -61,4 +91,7 @@ export interface Order {
   stripeSessionId?: string;
   createdAt: string;
   acknowledgedAt?: string | null;
+  scheduledTime?: string | null;
+  couponCode?: string | null;
+  couponDiscount?: number;
 }

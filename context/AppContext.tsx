@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Addon, Language, MenuItem, getDiscountedPrice } from '@/types';
+import { Addon, Discount, Language, MenuItem, getAppliedItemDiscount, getDiscountedPrice } from '@/types';
 import { translations } from '@/translations';
 
 export interface CartItem {
@@ -30,6 +30,7 @@ interface AppContextType {
   toasts: Toast[];
   addToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
   removeToast: (id: number) => void;
+  discounts: Discount[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -50,6 +51,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [lang, setLangState] = useState<Language>('de');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
 
   useEffect(() => {
     const savedLang = localStorage.getItem('lang') as Language;
@@ -57,7 +59,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const savedCart = localStorage.getItem('cart');
       if (savedCart) {
-        // Normalize old cart format that used selectedMandatoryAddon (singular)
         const parsed = JSON.parse(savedCart).map((c: any) => ({
           ...c,
           selectedMandatoryAddons:
@@ -68,6 +69,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCart(parsed);
       }
     } catch {}
+    fetch('/api/discounts?active=true')
+      .then(r => r.ok ? r.json() : [])
+      .then(setDiscounts)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -95,7 +100,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     selectedMandatoryAddons: Addon[] = [],
   ) => {
     const cartKey = buildCartKey(item.id, selectedOptionalAddons, selectedMandatoryAddons);
-    const discountedBase = getDiscountedPrice(item);
+    const appliedDiscount = getAppliedItemDiscount(item, discounts);
+    const isTwoForOne = appliedDiscount?.discountType === 'two_for_one';
+    const discountedBase = getDiscountedPrice(item, discounts);
     const addonPrice =
       selectedMandatoryAddons.reduce((s, a) => s + a.price, 0) +
       selectedOptionalAddons.reduce((s, a) => s + a.price, 0);
@@ -103,12 +110,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setCart(prev => {
       const existing = prev.find(c => c.cartKey === cartKey);
+      let next: CartItem[];
       if (existing) {
-        return prev.map(c =>
+        next = prev.map(c =>
           c.cartKey === cartKey ? { ...c, quantity: c.quantity + 1 } : c,
         );
+      } else {
+        next = [...prev, { cartKey, item, quantity: 1, selectedOptionalAddons, selectedMandatoryAddons, effectivePrice }];
       }
-      return [...prev, { cartKey, item, quantity: 1, selectedOptionalAddons, selectedMandatoryAddons, effectivePrice }];
+
+      if (isTwoForOne) {
+        const freeKey = `${cartKey}|free`;
+        const existingFree = next.find(c => c.cartKey === freeKey);
+        if (existingFree) {
+          next = next.map(c =>
+            c.cartKey === freeKey ? { ...c, quantity: c.quantity + 1 } : c,
+          );
+        } else {
+          next = [...next, {
+            cartKey: freeKey,
+            item,
+            quantity: 1,
+            selectedOptionalAddons,
+            selectedMandatoryAddons,
+            effectivePrice: 0,
+          }];
+        }
+      }
+
+      return next;
     });
     addToast(lang === 'de' ? `${item.name.de} hinzugefügt` : `${item.name.en} added`);
   };
@@ -117,7 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearCart = () => setCart([]);
 
   return (
-    <AppContext.Provider value={{ lang, setLang, t, cart, addToCart, removeFromCart, clearCart, toasts, addToast, removeToast }}>
+    <AppContext.Provider value={{ lang, setLang, t, cart, addToCart, removeFromCart, clearCart, toasts, addToast, removeToast, discounts }}>
       {children}
     </AppContext.Provider>
   );

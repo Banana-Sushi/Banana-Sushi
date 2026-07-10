@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
           .from('orders')
           .update({ status: 'processing' })
           .eq('id', orderId)
-          .select()
+          .select('*, coupon:coupons(code)')
           .single();
 
         if (updateError) {
@@ -67,30 +67,53 @@ export async function POST(req: NextRequest) {
 
         console.log(`[webhook] Order ${orderId} updated to processing`);
 
-        if (order && customerEmail) {
-          try {
-            const { sendOrderConfirmationEmail } = await import('@/lib/email');
-            const mappedOrder = {
-              id: order.id,
-              orderNumber: order.order_number,
-              customerName: order.customer_name,
-              phone: order.phone,
-              address: order.address,
-              zipCode: order.zip_code,
-              city: order.city,
-              paymentMethod: order.payment_method,
-              status: order.status,
-              items: order.items,
-              subtotal: Number(order.subtotal),
-              deliveryFee: Number(order.delivery_fee),
-              total: Number(order.total),
-              createdAt: order.created_at,
-            };
-            await sendOrderConfirmationEmail(mappedOrder as any, customerEmail);
-            console.log(`[webhook] Confirmation email sent to ${customerEmail}`);
-          } catch (emailErr) {
-            console.error('[webhook] Email failed:', emailErr);
+        // Record coupon use AFTER confirmed payment (not at session creation)
+        if (order?.coupon_id && customerEmail) {
+          const { error: useErr } = await supabase.from('coupon_uses').insert({
+            coupon_id: order.coupon_id,
+            order_id: order.id,
+            customer_identifier: customerEmail.toLowerCase().trim(),
+          });
+          if (!useErr) {
+            await supabase.rpc('increment_coupon_uses', { coupon_id_param: order.coupon_id });
+            const { data: couponNow } = await supabase
+              .from('coupons')
+              .select('uses_count, uses_limit')
+              .eq('id', order.coupon_id)
+              .single();
+            if (couponNow && couponNow.uses_count >= couponNow.uses_limit) {
+              await supabase.from('coupons').update({ is_active: false }).eq('id', order.coupon_id);
+            }
+          } else {
+            console.error('[webhook] Failed to record coupon use:', useErr.message);
           }
+        }
+
+        if (order && customerEmail) {
+          const mappedOrder = {
+            id: order.id,
+            orderNumber: order.order_number,
+            customerName: order.customer_name,
+            phone: order.phone,
+            address: order.address,
+            zipCode: order.zip_code,
+            city: order.city,
+            paymentMethod: order.payment_method,
+            status: order.status,
+            items: order.items,
+            subtotal: Number(order.subtotal),
+            deliveryFee: Number(order.delivery_fee),
+            total: Number(order.total),
+            createdAt: order.created_at,
+            couponCode: order.coupon?.code ?? null,
+            couponDiscount: Number(order.coupon_discount ?? 0),
+          };
+          // Fire and forget — don't block webhook response on email delivery
+          import('@/lib/email').then(({ sendOrderConfirmationEmail }) =>
+            sendOrderConfirmationEmail(mappedOrder as any, customerEmail)
+              .then(() => console.log(`[webhook] Email sent to ${customerEmail}`))
+              .catch((err: any) => console.error('[webhook] Email failed:', err))
+          ).catch((err: any) => console.error('[webhook] Email import failed:', err));
         }
       }
     }
