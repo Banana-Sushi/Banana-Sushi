@@ -100,9 +100,17 @@ export async function sendOrderConfirmationEmail(order: Order, customerEmail: st
 
 // ─── Email Verification ───────────────────────────────────────────────────────
 
+function getPublicUrl() {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  );
+}
+
 export async function sendVerificationEmail(email: string, firstName: string, token: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://sushibanana.de';
-  const verifyUrl = `${baseUrl}/account/verify?token=${token}`;
+  const baseUrl = getPublicUrl();
+  const verifyUrl = `${baseUrl}/account/verify?token=${encodeURIComponent(token)}`;
   const logo = getLogoAttachment();
 
   const html = `<!DOCTYPE html>
