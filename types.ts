@@ -95,3 +95,12 @@ export interface Order {
   couponCode?: string | null;
   couponDiscount?: number;
 }
+
+export interface DeliveryZone {
+  id: string;
+  maxDistanceKm: number;
+  fee: number;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+}

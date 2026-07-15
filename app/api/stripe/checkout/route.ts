@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { generateOrderNumber } from '@/lib/order-number';
-import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG, MAX_DELIVERY_KM } from '@/lib/distance';
+import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG } from '@/lib/distance';
+import { getDeliveryZoneForDistance } from '@/lib/delivery-zones';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 async function validateCoupon(supabase: SupabaseClient, code: string, email: string, subtotal: number) {
@@ -49,15 +50,26 @@ export async function POST(req: NextRequest) {
   const supabase = createServerSupabaseClient();
 
   const isPickup = body.paymentMethod === 'pickup_online';
+  let deliveryFee = Number(body.deliveryFee ?? 0);
 
   if (!isPickup && body.address && body.zipCode && body.city) {
     try {
       const coords = await geocodeAddress(body.address, body.zipCode, body.city);
-      if (!coords) return NextResponse.json({ error: 'Delivery address out of range' }, { status: 400 });
+      if (!coords) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
       const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
-      if (dist > MAX_DELIVERY_KM) return NextResponse.json({ error: 'Delivery address out of range' }, { status: 400 });
+      const { data: zones } = await supabase.from('delivery_zones').select('*').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true });
+      const evaluation = getDeliveryZoneForDistance(dist, (zones ?? []).map((zone: any) => ({
+        id: zone.id,
+        maxDistanceKm: Number(zone.max_distance_km),
+        fee: Number(zone.fee),
+        isActive: zone.is_active ?? true,
+        sortOrder: Number(zone.sort_order ?? 0),
+        createdAt: zone.created_at,
+      })));
+      if (evaluation.isOutOfRange || evaluation.fee === null) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
+      deliveryFee = evaluation.fee;
     } catch {
-      return NextResponse.json({ error: 'Delivery address out of range' }, { status: 400 });
+      return NextResponse.json({ error: 'Out of range' }, { status: 400 });
     }
   }
 
@@ -75,7 +87,7 @@ export async function POST(req: NextRequest) {
   }
 
   const orderNumber = await generateOrderNumber(supabase);
-  const finalTotal = Math.max(0, (body.subtotal + (body.deliveryFee ?? 0)) - couponDiscount);
+  const finalTotal = Math.max(0, (body.subtotal + deliveryFee) - couponDiscount);
 
   // Build Stripe line items
   const lineItems = body.items.map((item: any) => ({
@@ -88,12 +100,12 @@ export async function POST(req: NextRequest) {
   }));
 
   // Add delivery fee only for non-pickup orders
-  if (!isPickup && body.deliveryFee > 0) {
+  if (!isPickup && deliveryFee > 0) {
     lineItems.push({
       price_data: {
         currency: 'eur',
         product_data: { name: 'Delivery Fee' },
-        unit_amount: Math.round(body.deliveryFee * 100),
+        unit_amount: Math.round(deliveryFee * 100),
       },
       quantity: 1,
     });
@@ -130,7 +142,7 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         items: body.items,
         subtotal: body.subtotal,
-        delivery_fee: body.deliveryFee ?? 0,
+        delivery_fee: deliveryFee,
         total: finalTotal,
         coupon_id: couponId,
         coupon_discount: couponDiscount,

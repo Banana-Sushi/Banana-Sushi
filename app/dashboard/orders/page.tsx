@@ -89,25 +89,36 @@ export default function OrdersPage() {
   const [updating, setUpdating] = useState(false);
 
   const fetchOrders = useCallback(async () => {
-    const res = await fetch('/api/orders');
-    if (res.ok) {
-      const data = await res.json();
-      const mapped = data.map(mapOrder);
-      setOrders(mapped);
-      mapped.forEach((o: Order) => seenOrderIds.current.add(o.id));
+    try {
+      const res = await fetch('/api/orders');
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = Array.isArray(data) ? data.map(mapOrder) : [];
+        setOrders(mapped);
+        mapped.forEach((o: Order) => seenOrderIds.current.add(o.id));
+      }
+    } catch (error) {
+      console.error('Failed to refresh orders', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    void fetchOrders();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchOrders();
+      }
+    };
 
     const channel = supabase
       .channel('orders-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
         const raw = payload.new as any;
         if (raw?.status === 'pending') return;
-        fetchOrders();
+        void fetchOrders();
         if (raw?.id && !seenOrderIds.current.has(raw.id)) {
           seenOrderIds.current.add(raw.id);
           setNewOrderIds(prev => new Set([...prev, raw.id]));
@@ -121,7 +132,7 @@ export default function OrdersPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
         const raw = payload.new as any;
         if (raw?.status === 'pending') return;
-        fetchOrders();
+        void fetchOrders();
         const id = raw?.id;
         if (id && !seenOrderIds.current.has(id) && raw.status === 'processing') {
           seenOrderIds.current.add(id);
@@ -135,12 +146,45 @@ export default function OrdersPage() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    const poller = window.setInterval(() => {
+      void fetchOrders();
+    }, 10000);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(poller);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+      supabase.removeChannel(channel);
+    };
   }, [fetchOrders]);
 
   const openOrder = useCallback((order: Order) => {
     setSelectedOrder(order);
   }, []);
+
+  const handleDeleteCompletedOrder = useCallback(async () => {
+    if (!selectedOrder || selectedOrder.status !== 'completed') return;
+    if (!window.confirm(`Delete completed order ${selectedOrder.orderNumber}?`)) return;
+
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to delete order');
+      }
+      setOrders(prev => prev.filter(order => order.id !== selectedOrder.id));
+      setSelectedOrder(null);
+      addToast('Completed order deleted', 'success');
+    } catch (error: any) {
+      addToast(error.message || 'Failed to delete order', 'error');
+    } finally {
+      setUpdating(false);
+    }
+  }, [addToast, selectedOrder]);
 
   const handlePrint = useCallback(() => {
     if (!selectedOrder) return;
@@ -608,6 +652,15 @@ export default function OrdersPage() {
                     className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     <Icons.Check /> {updating ? '...' : t.dashboard.markComplete}
+                  </button>
+                )}
+                {selectedOrder.status === 'completed' && (
+                  <button
+                    onClick={handleDeleteCompletedOrder}
+                    disabled={updating}
+                    className="flex items-center gap-2 bg-red-500 text-white px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 transition-all disabled:opacity-50"
+                  >
+                    Delete
                   </button>
                 )}
                 <button

@@ -84,7 +84,19 @@ CREATE TABLE discounts (
 -- 7. Scheduled time for orders
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_time TEXT;
 
--- 8. Coupons
+-- 8. Delivery zones
+CREATE TABLE IF NOT EXISTS delivery_zones (
+  id                UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
+  max_distance_km   DECIMAL(10,2) NOT NULL,
+  fee               DECIMAL(10,2) NOT NULL DEFAULT 0,
+  is_active         BOOLEAN       NOT NULL DEFAULT true,
+  sort_order        INTEGER       NOT NULL DEFAULT 0,
+  created_at        TIMESTAMPTZ   DEFAULT NOW()
+);
+
+GRANT ALL ON TABLE delivery_zones TO postgres, anon, authenticated, service_role;
+
+-- 9. Coupons
 CREATE TABLE IF NOT EXISTS coupons (
   id              UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
   code            TEXT          UNIQUE NOT NULL,

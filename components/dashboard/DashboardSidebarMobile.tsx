@@ -28,6 +28,7 @@ export const DashboardSidebarMobile = ({ role }: { role?: 'admin' | 'staff' | nu
     { to: '/dashboard/stats', label: t.dashboard.stats, icon: <Icons.Stats />, adminOnly: true },
     { to: '/dashboard/menu', label: t.dashboard.menuMgmt, icon: <Icons.Edit />, adminOnly: true },
     { to: '/dashboard/discounts', label: t.dashboard.discounts, icon: <Icons.Percent />, adminOnly: true },
+    { to: '/dashboard/delivery-zones', label: t.dashboard.deliveryZones, icon: <Icons.Clock />, adminOnly: true },
     { to: '/dashboard/gutschein', label: t.dashboard.gutschein, icon: <Icons.Ticket />, adminOnly: true },
     { to: '/dashboard/content', label: 'Content', icon: <Icons.Content />, adminOnly: true },
     { to: '/dashboard/staff', label: t.dashboard.staff, icon: <Icons.Users />, adminOnly: true },

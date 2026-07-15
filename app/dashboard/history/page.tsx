@@ -25,16 +25,37 @@ function mapOrder(raw: any): Order {
 }
 
 export default function HistoryPage() {
-  const { t } = useAppContext();
+  const { t, addToast } = useAppContext();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<'all' | 'today' | 'month'>('all');
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/orders')
       .then(res => res.json())
       .then(data => { setOrders(data.map(mapOrder)); setLoading(false); });
   }, []);
+
+  const handleDeleteOrder = async (order: Order) => {
+    if (order.status !== 'completed') return;
+    if (!window.confirm(`Delete completed order ${order.orderNumber}?`)) return;
+
+    setDeletingId(order.id);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to delete order');
+      }
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+      addToast('Completed order deleted', 'success');
+    } catch (error: any) {
+      addToast(error.message || 'Failed to delete order', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const getLocalDateStr = (d: Date) =>
@@ -80,6 +101,7 @@ export default function HistoryPage() {
                 <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">{t.dashboard.total}</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">{t.dashboard.status}</th>
                 <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">Payment</th>
+                <th className="px-8 py-5 text-[10px] font-black text-gray-300 uppercase">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 font-bold">
@@ -107,6 +129,19 @@ export default function HistoryPage() {
                      order.paymentMethod === 'cash' ? 'Cash' :
                      order.paymentMethod === 'pickup_online' ? 'Pickup (Card)' :
                      'Pickup (On-site)'}
+                  </td>
+                  <td className="px-8 py-6">
+                    {order.status === 'completed' ? (
+                      <button
+                        onClick={() => handleDeleteOrder(order)}
+                        disabled={deletingId === order.id}
+                        className="rounded-xl border border-red-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 transition-all hover:bg-red-500 hover:text-white disabled:opacity-50"
+                      >
+                        {deletingId === order.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-black uppercase text-gray-300">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

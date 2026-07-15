@@ -6,7 +6,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '@/components/Icons';
-import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG, MAX_DELIVERY_KM } from '@/lib/distance';
+import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG } from '@/lib/distance';
+import { getDeliveryZoneForDistance } from '@/lib/delivery-zones';
 
 interface CustomerAddress {
   id: string;
@@ -34,6 +35,7 @@ export default function OrderPage() {
   const [paymentChoice, setPaymentChoice] = useState<'online' | 'cash'>('online');
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', zip: '', city: '', note: '', scheduledTime: '' });
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [feeStatus, setFeeStatus] = useState<'idle' | 'pending' | 'ready'>('idle');
   const [couponCode, setCouponCode] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -43,6 +45,8 @@ export default function OrderPage() {
     discountValue: number;
   } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [rangeError, setRangeError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Customer session state
   const [customer, setCustomer] = useState<CustomerSession | null>(null);
@@ -53,16 +57,6 @@ export default function OrderPage() {
 
   const isPickup = deliveryMode === 'pickup';
   const effectiveDeliveryFee = isPickup ? 0 : (deliveryFee ?? 0);
-
-  useEffect(() => {
-    fetch('/api/content')
-      .then(r => r.json())
-      .then(data => {
-        const fee = parseFloat(data.delivery_fee);
-        if (!isNaN(fee)) setDeliveryFee(fee);
-      })
-      .catch(() => setDeliveryFee(2.90));
-  }, []);
 
   // Load customer session
   useEffect(() => {
@@ -133,6 +127,33 @@ export default function OrderPage() {
   const discountedSubtotal = subtotal - commandDiscountAmount;
   const couponDiscountAmount = appliedCoupon?.discountAmount ?? 0;
   const total = Math.max(0, discountedSubtotal - couponDiscountAmount + effectiveDeliveryFee);
+  const previewFee = isPickup ? 0 : (deliveryFee ?? 0);
+  const previewTotal = Math.max(0, discountedSubtotal - couponDiscountAmount + previewFee);
+
+  const buildOrderData = (fee: number) => ({
+    customerName: form.name,
+    email: form.email,
+    phone: form.phone,
+    address: isPickup ? null : form.address,
+    zipCode: isPickup ? null : form.zip,
+    city: isPickup ? null : form.city,
+    deliveryNote: form.note || null,
+    scheduledTime: form.scheduledTime || null,
+    paymentMethod: isPickup ? (paymentChoice === 'online' ? 'pickup_online' : 'pickup_cash') : paymentChoice,
+    items: cart.map(c => ({
+      menuItemId: c.item.id,
+      name: c.item.name[lang],
+      quantity: c.quantity,
+      price: c.effectivePrice,
+      selectedOptionalAddons: c.selectedOptionalAddons,
+      selectedMandatoryAddons: c.selectedMandatoryAddons,
+    })),
+    subtotal: discountedSubtotal,
+    deliveryFee: fee,
+    total: Math.max(0, discountedSubtotal - couponDiscountAmount + fee),
+    couponCode: appliedCoupon?.code ?? null,
+    customerId: customer?.id ?? null,
+  });
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -166,69 +187,60 @@ export default function OrderPage() {
     e.preventDefault();
     if (cart.length === 0) return;
     setLoading(true);
+    setDeliveryFee(null);
+    setFeeStatus('pending');
+    setShowConfirmModal(false);
+    setRangeError(null);
 
     if (!isPickup) {
       setCheckingAddress(true);
       try {
         const coords = await geocodeAddress(form.address, form.zip, form.city);
         if (!coords) {
-          addToast('Adresse konnte nicht gefunden werden. Bitte überprüfe deine Eingabe.', 'error');
+          setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
           setCheckingAddress(false);
           setLoading(false);
+          setFeeStatus('idle');
           return;
         }
         const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
-        if (dist > MAX_DELIVERY_KM) {
-          addToast(
-            lang === 'de'
-              ? 'Deine Adresse liegt außerhalb unseres Liefergebiets (max. 7 km).'
-              : 'Your address is outside our delivery area (max. 7 km).',
-            'error',
-          );
+        const zonesRes = await fetch('/api/delivery-zones');
+        const zones = await zonesRes.json();
+        const evaluation = getDeliveryZoneForDistance(dist, zones);
+        if (evaluation.isOutOfRange) {
+          setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
           setCheckingAddress(false);
           setLoading(false);
+          setFeeStatus('idle');
           return;
         }
+        const computedFee = evaluation.fee ?? 0;
+        setDeliveryFee(computedFee);
+        setFeeStatus('ready');
       } catch {
         addToast('Adresse konnte nicht gefunden werden. Bitte überprüfe deine Eingabe.', 'error');
         setCheckingAddress(false);
         setLoading(false);
+        setFeeStatus('idle');
         return;
       }
       setCheckingAddress(false);
-    }
-
-    let paymentMethod: string;
-    if (isPickup) {
-      paymentMethod = paymentChoice === 'online' ? 'pickup_online' : 'pickup_cash';
     } else {
-      paymentMethod = paymentChoice;
+      setDeliveryFee(0);
+      setFeeStatus('ready');
     }
 
-    const orderData = {
-      customerName: form.name,
-      email: form.email,
-      phone: form.phone,
-      address: isPickup ? null : form.address,
-      zipCode: isPickup ? null : form.zip,
-      city: isPickup ? null : form.city,
-      deliveryNote: form.note || null,
-      scheduledTime: form.scheduledTime || null,
-      paymentMethod,
-      items: cart.map(c => ({
-        menuItemId: c.item.id,
-        name: c.item.name[lang],
-        quantity: c.quantity,
-        price: c.effectivePrice,
-        selectedOptionalAddons: c.selectedOptionalAddons,
-        selectedMandatoryAddons: c.selectedMandatoryAddons,
-      })),
-      subtotal: discountedSubtotal,
-      deliveryFee: effectiveDeliveryFee,
-      total,
-      couponCode: appliedCoupon?.code ?? null,
-      customerId: customer?.id ?? null,
-    };
+    setLoading(false);
+    setShowConfirmModal(true);
+  };
+
+  const confirmOrder = async () => {
+    if (cart.length === 0) return;
+    setLoading(true);
+    setShowConfirmModal(false);
+
+    const fee = isPickup ? 0 : (deliveryFee ?? 0);
+    const orderData = buildOrderData(fee);
 
     try {
       if (paymentChoice === 'online') {
@@ -274,6 +286,97 @@ export default function OrderPage() {
 
   return (
     <div className="pt-[100px] md:pt-[130px] px-4 md:px-6 pb-32 max-w-screen-2xl mx-auto animate-fade-in">
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-[2rem] border border-gray-200 bg-white shadow-2xl">
+            <div className="border-b border-gray-100 bg-gray-50 px-6 py-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-400">
+                {lang === 'de' ? 'Bestellung bestätigen' : 'Confirm order'}
+              </p>
+              <h3 className="mt-2 text-xl font-black uppercase tracking-tight text-black">
+                {lang === 'de' ? 'Bitte prüfe deine Bestellung' : 'Please review your order'}
+              </h3>
+            </div>
+
+            <div className="p-8">
+              <div className="rounded-[1.25rem] border border-gray-100 bg-gray-50 p-4">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  <span>{lang === 'de' ? 'Ihre Auswahl' : 'Your selection'}</span>
+                  <span className="text-gray-700">{cart.reduce((total, item) => total + item.quantity, 0)} {lang === 'de' ? 'Artikel' : 'items'}</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {cart.map(item => (
+                    <div key={item.cartKey} className="flex items-center justify-between rounded-2xl bg-white px-3 py-2 text-sm font-bold text-gray-700">
+                      <span>{item.quantity}× {item.item.name[lang]}</span>
+                      <span className="text-gray-900">{(item.effectivePrice * item.quantity).toFixed(2)}€</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-[1.25rem] border border-gray-100 bg-white p-4">
+                <div className="space-y-3 text-sm font-bold text-gray-600">
+                  <div className="flex justify-between">
+                    <span>{t.checkout.subtotal}</span>
+                    <span>{discountedSubtotal.toFixed(2)}€</span>
+                  </div>
+                  {couponDiscountAmount > 0 && appliedCoupon && (
+                    <div className="flex justify-between text-green-600">
+                      <span>{lang === 'de' ? 'Gutschein' : 'Coupon'} ({appliedCoupon.code})</span>
+                      <span>-{couponDiscountAmount.toFixed(2)}€</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>{t.checkout.delivery}</span>
+                    <span>{previewFee.toFixed(2)}€</span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-200 pt-3 text-base font-black text-black">
+                    <span>{t.checkout.total}</span>
+                    <span>{previewTotal.toFixed(2)}€</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-all hover:bg-gray-100"
+                >
+                  {lang === 'de' ? 'Zurück' : 'Back'}
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmOrder}
+                  disabled={loading}
+                  className="flex-1 rounded-2xl bg-black px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {loading ? '...' : (lang === 'de' ? 'Jetzt bestellen' : 'Place order')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rangeError && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-8 text-center shadow-2xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">{lang === 'de' ? 'Lieferung nicht möglich' : 'Delivery unavailable'}</p>
+            <h3 className="mt-3 text-2xl font-black uppercase tracking-tight">{rangeError}</h3>
+            <p className="mt-3 text-sm font-bold text-gray-500">
+              {lang === 'de' ? 'Diese Adresse liegt außerhalb des aktuell definierten Liefergebiets.' : 'This address is outside the currently configured delivery area.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setRangeError(null)}
+              className="mt-6 w-full rounded-2xl bg-black px-5 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-white hover:bg-yellow-500 hover:text-black transition-all"
+            >
+              {lang === 'de' ? 'Schließen' : 'Close'}
+            </button>
+          </div>
+        </div>
+      )}
       <h2 className="text-4xl md:text-5xl font-black uppercase mb-8 tracking-tighter">{t.checkout.title}</h2>
 
       {/* Guest / Login banner */}
@@ -393,14 +496,25 @@ export default function OrderPage() {
             <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
               <span>{t.checkout.delivery}</span>
               <span className="text-black">
-                {isPickup ? (lang === 'de' ? 'Kostenlos' : 'Free') : (deliveryFee !== null ? `${deliveryFee.toFixed(2)}€` : '...')}
+                {isPickup ? (lang === 'de' ? 'Kostenlos' : 'Free') : (
+                  feeStatus === 'pending'
+                    ? (lang === 'de' ? 'Wird berechnet...' : 'Calculating...')
+                    : deliveryFee !== null
+                      ? `${deliveryFee.toFixed(2)}€`
+                      : (lang === 'de' ? 'Kostenlos' : 'Free')
+                )}
               </span>
             </div>
             <div className="flex justify-between items-baseline pt-3 border-t border-gray-200 text-black">
               <span className="font-black uppercase tracking-widest text-[10px]">{t.checkout.total}</span>
-              <span className="text-3xl font-black">{(isPickup || deliveryFee !== null) ? `${total.toFixed(2)}€` : '...'}</span>
+              <span className="text-3xl font-black">{(isPickup || feeStatus === 'ready' || feeStatus === 'pending') ? `${total.toFixed(2)}€` : '...'}</span>
             </div>
             <p className="text-[9px] text-gray-300 font-bold uppercase pt-1">{t.checkout.taxInfo}</p>
+            {!isPickup && feeStatus === 'pending' && (
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                {lang === 'de' ? 'Bitte gib deine Adresse ein, um die Liefergebühr zu berechnen.' : 'Please enter your address to calculate the delivery fee.'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -412,17 +526,17 @@ export default function OrderPage() {
             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{t.checkout.payment}</p>
 
             <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${deliveryMode === 'delivery' && paymentChoice === 'online' ? 'border-yellow-500' : 'border-transparent'}`}>
-              <input type="radio" name="mode" value="delivery_online" checked={deliveryMode === 'delivery' && paymentChoice === 'online'} onChange={() => { setDeliveryMode('delivery'); setPaymentChoice('online'); }} className="accent-black" />
+              <input type="radio" name="mode" value="delivery_online" checked={deliveryMode === 'delivery' && paymentChoice === 'online'} onChange={() => { setDeliveryMode('delivery'); setPaymentChoice('online'); setDeliveryFee(null); }} className="accent-black" />
               {t.checkout.online}
             </label>
 
             <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${deliveryMode === 'delivery' && paymentChoice === 'cash' ? 'border-yellow-500' : 'border-transparent'}`}>
-              <input type="radio" name="mode" value="delivery_cash" checked={deliveryMode === 'delivery' && paymentChoice === 'cash'} onChange={() => { setDeliveryMode('delivery'); setPaymentChoice('cash'); }} className="accent-black" />
+              <input type="radio" name="mode" value="delivery_cash" checked={deliveryMode === 'delivery' && paymentChoice === 'cash'} onChange={() => { setDeliveryMode('delivery'); setPaymentChoice('cash'); setDeliveryFee(null); }} className="accent-black" />
               {t.checkout.cash}
             </label>
 
             <label className={`flex items-center gap-4 bg-white p-4 rounded-xl cursor-pointer font-black text-[11px] uppercase border-2 transition-all ${isPickup ? 'border-yellow-500' : 'border-transparent'}`}>
-              <input type="radio" name="mode" value="pickup" checked={isPickup} onChange={() => { setDeliveryMode('pickup'); setPaymentChoice('online'); }} className="accent-black" />
+              <input type="radio" name="mode" value="pickup" checked={isPickup} onChange={() => { setDeliveryMode('pickup'); setPaymentChoice('online'); setDeliveryFee(null); }} className="accent-black" />
               {t.checkout.pickup}
             </label>
 

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { verifyToken } from '@/lib/auth';
 import { generateOrderNumber } from '@/lib/order-number';
-import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG, MAX_DELIVERY_KM } from '@/lib/distance';
+import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG } from '@/lib/distance';
+import { getDeliveryZoneForDistance } from '@/lib/delivery-zones';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 async function validateCoupon(supabase: SupabaseClient, code: string, email: string, subtotal: number) {
@@ -62,18 +63,29 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   const isDelivery = body.paymentMethod === 'cash' || body.paymentMethod === 'online';
+  let deliveryFee = Number(body.deliveryFee ?? 0);
+  const supabase = createServerSupabaseClient();
+
   if (isDelivery && body.address && body.zipCode && body.city) {
     try {
       const coords = await geocodeAddress(body.address, body.zipCode, body.city);
-      if (!coords) return NextResponse.json({ error: 'Delivery address out of range' }, { status: 400 });
+      if (!coords) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
       const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
-      if (dist > MAX_DELIVERY_KM) return NextResponse.json({ error: 'Delivery address out of range' }, { status: 400 });
+      const { data: zones } = await supabase.from('delivery_zones').select('*').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true });
+      const evaluation = getDeliveryZoneForDistance(dist, (zones ?? []).map((zone: any) => ({
+        id: zone.id,
+        maxDistanceKm: Number(zone.max_distance_km),
+        fee: Number(zone.fee),
+        isActive: zone.is_active ?? true,
+        sortOrder: Number(zone.sort_order ?? 0),
+        createdAt: zone.created_at,
+      })));
+      if (evaluation.isOutOfRange || evaluation.fee === null) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
+      deliveryFee = evaluation.fee;
     } catch {
-      return NextResponse.json({ error: 'Delivery address out of range' }, { status: 400 });
+      return NextResponse.json({ error: 'Out of range' }, { status: 400 });
     }
   }
-
-  const supabase = createServerSupabaseClient();
 
   // Validate and apply coupon if provided
   let couponId: string | null = null;
@@ -93,7 +105,7 @@ export async function POST(req: NextRequest) {
   }
 
   const orderNumber = await generateOrderNumber(supabase);
-  const finalTotal = Math.max(0, (body.subtotal + (body.deliveryFee ?? 0)) - couponDiscount);
+  const finalTotal = Math.max(0, (body.subtotal + deliveryFee) - couponDiscount);
 
   const { data, error } = await supabase
     .from('orders')
@@ -110,7 +122,7 @@ export async function POST(req: NextRequest) {
       status: 'processing',
       items: body.items,
       subtotal: body.subtotal,
-      delivery_fee: body.deliveryFee ?? 0,
+      delivery_fee: deliveryFee,
       total: finalTotal,
       coupon_id: couponId,
       coupon_discount: couponDiscount,

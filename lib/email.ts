@@ -283,7 +283,7 @@ export async function sendDiscountEmail(recipients: DiscountRecipient[], discoun
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td align="center">
-                  <a href="${baseUrl}/order"
+                  <a href="${baseUrl}/menu"
                      style="display:inline-block;background:#000000;color:#ffffff;padding:20px 56px;border-radius:100px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:3px;text-decoration:none;">
                     Jetzt bestellen &#x2192;
                   </a>

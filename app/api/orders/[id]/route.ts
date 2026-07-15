@@ -52,3 +52,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await requireAuth(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const supabase = createServerSupabaseClient();
+  const { data: existingOrder, error: fetchError } = await supabase
+    .from('orders')
+    .select('id, status')
+    .eq('id', id)
+    .single();
+
+  if (fetchError || !existingOrder) {
+    return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+  }
+
+  if (existingOrder.status !== 'completed') {
+    return NextResponse.json({ error: 'Only completed orders can be deleted' }, { status: 400 });
+  }
+
+  const { error } = await supabase.from('orders').delete().eq('id', id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true, deletedId: id });
+}

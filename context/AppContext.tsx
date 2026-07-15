@@ -24,7 +24,7 @@ interface AppContextType {
   setLang: (l: Language) => void;
   t: typeof translations['de'];
   cart: CartItem[];
-  addToCart: (item: MenuItem, selectedOptionalAddons?: Addon[], selectedMandatoryAddons?: Addon[]) => void;
+  addToCart: (item: MenuItem, selectedOptionalAddons?: Addon[], selectedMandatoryAddons?: Addon[], quantity?: number) => void;
   removeFromCart: (cartKey: string) => void;
   clearCart: () => void;
   toasts: Toast[];
@@ -98,43 +98,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     item: MenuItem,
     selectedOptionalAddons: Addon[] = [],
     selectedMandatoryAddons: Addon[] = [],
+    quantity = 1,
   ) => {
-    const cartKey = buildCartKey(item.id, selectedOptionalAddons, selectedMandatoryAddons);
-    const appliedDiscount = getAppliedItemDiscount(item, discounts);
-    const isTwoForOne = appliedDiscount?.discountType === 'two_for_one';
-    const discountedBase = getDiscountedPrice(item, discounts);
-    const addonPrice =
-      selectedMandatoryAddons.reduce((s, a) => s + a.price, 0) +
-      selectedOptionalAddons.reduce((s, a) => s + a.price, 0);
-    const effectivePrice = Math.round((discountedBase + addonPrice) * 100) / 100;
+    const normalizedQuantity = Math.max(1, Math.floor(quantity));
 
     setCart(prev => {
-      const existing = prev.find(c => c.cartKey === cartKey);
-      let next: CartItem[];
-      if (existing) {
-        next = prev.map(c =>
-          c.cartKey === cartKey ? { ...c, quantity: c.quantity + 1 } : c,
-        );
-      } else {
-        next = [...prev, { cartKey, item, quantity: 1, selectedOptionalAddons, selectedMandatoryAddons, effectivePrice }];
-      }
+      let next = [...prev];
 
-      if (isTwoForOne) {
-        const freeKey = `${cartKey}|free`;
-        const existingFree = next.find(c => c.cartKey === freeKey);
-        if (existingFree) {
+      for (let index = 0; index < normalizedQuantity; index += 1) {
+        const cartKey = buildCartKey(item.id, selectedOptionalAddons, selectedMandatoryAddons);
+        const appliedDiscount = getAppliedItemDiscount(item, discounts);
+        const isTwoForOne = appliedDiscount?.discountType === 'two_for_one';
+        const discountedBase = getDiscountedPrice(item, discounts);
+        const addonPrice =
+          selectedMandatoryAddons.reduce((s, a) => s + a.price, 0) +
+          selectedOptionalAddons.reduce((s, a) => s + a.price, 0);
+        const effectivePrice = Math.round((discountedBase + addonPrice) * 100) / 100;
+        const existing = next.find(c => c.cartKey === cartKey);
+
+        if (existing) {
           next = next.map(c =>
-            c.cartKey === freeKey ? { ...c, quantity: c.quantity + 1 } : c,
+            c.cartKey === cartKey ? { ...c, quantity: c.quantity + 1 } : c,
           );
         } else {
-          next = [...next, {
-            cartKey: freeKey,
-            item,
-            quantity: 1,
-            selectedOptionalAddons,
-            selectedMandatoryAddons,
-            effectivePrice: 0,
-          }];
+          next = [...next, { cartKey, item, quantity: 1, selectedOptionalAddons, selectedMandatoryAddons, effectivePrice }];
+        }
+
+        if (isTwoForOne) {
+          const freeKey = `${cartKey}|free`;
+          const existingFree = next.find(c => c.cartKey === freeKey);
+          if (existingFree) {
+            next = next.map(c =>
+              c.cartKey === freeKey ? { ...c, quantity: c.quantity + 1 } : c,
+            );
+          } else {
+            next = [...next, {
+              cartKey: freeKey,
+              item,
+              quantity: 1,
+              selectedOptionalAddons,
+              selectedMandatoryAddons,
+              effectivePrice: 0,
+            }];
+          }
         }
       }
 

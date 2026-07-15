@@ -4,6 +4,39 @@ import { verifyToken } from '@/lib/auth';
 import { Discount } from '@/types';
 import { sendDiscountEmail } from '@/lib/email';
 
+export async function GET(req: NextRequest) {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from('discounts')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  let result = data.map((d: any) => ({
+    id: d.id,
+    section: d.section,
+    menuItemId: d.menu_item_id ?? null,
+    categoryName: d.category_name ?? null,
+    discountType: d.discount_type,
+    discountValue: d.discount_value !== null && d.discount_value !== undefined ? Number(d.discount_value) : null,
+    minOrderTotal: d.min_order_total !== null && d.min_order_total !== undefined ? Number(d.min_order_total) : null,
+    startDate: d.start_date ?? null,
+    endDate: d.end_date ?? null,
+    isActive: d.is_active,
+  })) as Discount[];
+
+  if (req.nextUrl.searchParams.get('active') === 'true') {
+    const now = new Date();
+    result = result.filter(d =>
+      d.isActive &&
+      (!d.startDate || new Date(d.startDate) <= now) &&
+      (!d.endDate || new Date(d.endDate) >= now),
+    );
+  }
+
+  return NextResponse.json(result);
+}
+
 function mapDiscount(d: any): Discount {
   return {
     id: d.id,
@@ -17,28 +50,6 @@ function mapDiscount(d: any): Discount {
     endDate: d.end_date ?? null,
     isActive: d.is_active,
   };
-}
-
-export async function GET(req: NextRequest) {
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from('discounts')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  let result = data.map(mapDiscount);
-
-  if (req.nextUrl.searchParams.get('active') === 'true') {
-    const now = new Date();
-    result = result.filter(d =>
-      d.isActive &&
-      (!d.startDate || new Date(d.startDate) <= now) &&
-      (!d.endDate || new Date(d.endDate) >= now),
-    );
-  }
-
-  return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {

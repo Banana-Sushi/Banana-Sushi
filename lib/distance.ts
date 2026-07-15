@@ -2,6 +2,11 @@ export const RESTAURANT_LAT = 52.4269;
 export const RESTAURANT_LNG = 13.3089;
 export const MAX_DELIVERY_KM = 7;
 
+export interface DeliveryAddressCoords {
+  lat: number;
+  lng: number;
+}
+
 export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
