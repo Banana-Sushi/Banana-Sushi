@@ -19,7 +19,8 @@ export function sortDeliveryZones(zones: DeliveryZone[]): DeliveryZone[] {
 
 export function getDeliveryZoneForDistance(distanceKm: number, zones: DeliveryZone[]): DeliveryZoneEvaluation {
   const activeZones = sortDeliveryZones(zones.filter(zone => zone.isActive !== false));
-  const maxZone = activeZones[activeZones.length - 1] ?? null;
+  const maxDistanceKm = activeZones.reduce((max, zone) => Math.max(max, zone.maxDistanceKm ?? 0), 0);
+  const maxZone = activeZones.find(zone => (zone.maxDistanceKm ?? 0) === maxDistanceKm) ?? activeZones[activeZones.length - 1] ?? null;
 
   for (const zone of activeZones) {
     if (distanceKm <= zone.maxDistanceKm) {

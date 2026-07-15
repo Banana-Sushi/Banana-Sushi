@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '@/components/Icons';
@@ -57,6 +57,13 @@ export default function OrderPage() {
 
   const isPickup = deliveryMode === 'pickup';
   const effectiveDeliveryFee = isPickup ? 0 : (deliveryFee ?? 0);
+  const datetimeInputRef = useRef<HTMLInputElement | null>(null);
+
+  const formatScheduledTimeDisplay = (value: string) => {
+    if (!value) return '';
+    const [date, time] = value.split('T');
+    return date && time ? `${date} ${time}` : value;
+  };
 
   // Load customer session
   useEffect(() => {
@@ -655,13 +662,32 @@ export default function OrderPage() {
             className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm resize-none"
           />
 
-          <input
-            type="datetime-local"
-            value={form.scheduledTime}
-            onChange={e => setForm({ ...form, scheduledTime: e.target.value })}
-            className="w-full p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
-          />
-          <p className="text-[9px] font-black uppercase text-gray-300 tracking-widest -mt-3">{t.checkout.scheduledTime}</p>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-black tracking-wide ml-1">{t.checkout.scheduledTime}</label>
+
+            {/* Desktop: real datetime-local input */}
+            <input
+              type="datetime-local"
+              value={form.scheduledTime}
+              onChange={e => setForm({ ...form, scheduledTime: e.target.value })}
+              placeholder="Select date and time"
+              className="hidden md:block w-full p-4 rounded-[32px] border border-neutral-200 bg-white text-black text-sm font-bold shadow-sm outline-none transition focus:border-black"
+            />
+
+            {/* Mobile: custom visible field with hidden picker overlay */}
+            <div className="relative md:hidden">
+              <div className="w-full text-left p-4 rounded-[32px] border border-neutral-200 bg-white text-black text-sm font-bold shadow-sm transition">
+                {form.scheduledTime ? formatScheduledTimeDisplay(form.scheduledTime) : 'Select date and time'}
+              </div>
+              <input
+                ref={datetimeInputRef}
+                type="datetime-local"
+                value={form.scheduledTime}
+                onChange={e => setForm({ ...form, scheduledTime: e.target.value })}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
+          </div>
 
           {/* Coupon code */}
           <div className="space-y-2">

@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
   const onlineList  = orders.filter(o => o.payment_method === 'online');
   const pickupList  = orders.filter(o => o.payment_method === 'pickup_online' || o.payment_method === 'pickup_cash');
 
-  const vatRate = 0.19;
-  // German prices are gross (VAT-inclusive): extract the VAT portion, not add 19% on top
+  const vatRate = 0.07;
+  // German prices are gross (VAT-inclusive): extract the VAT portion, not add 7% on top
   const netRevenue = round2(subtotalRevenue / (1 + vatRate));
   const vatAmount  = round2(subtotalRevenue - netRevenue);
 
