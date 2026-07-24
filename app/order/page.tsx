@@ -676,7 +676,7 @@ export default function OrderPage() {
 
             {/* Mobile: custom visible field with hidden picker overlay */}
             <div className="relative md:hidden">
-              <div className="w-full text-left p-4 rounded-[32px] border border-neutral-200 bg-white text-black text-sm font-bold shadow-sm transition">
+              <div className="w-full text-left p-4 pr-12 rounded-[32px] border border-neutral-200 bg-white text-black text-sm font-bold shadow-sm transition">
                 {form.scheduledTime ? formatScheduledTimeDisplay(form.scheduledTime) : 'Select date and time'}
               </div>
               <input
@@ -686,6 +686,15 @@ export default function OrderPage() {
                 onChange={e => setForm({ ...form, scheduledTime: e.target.value })}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
+              {form.scheduledTime && (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, scheduledTime: '' })}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-gray-600 text-xs font-black"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           </div>
 
