@@ -12,31 +12,30 @@ export const MenuPageClient = ({ items }: { items: MenuItem[] }) => {
   const { t, lang } = useAppContext();
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [isFilterFixed, setIsFilterFixed] = useState(false);
   const touchStartX = useRef<number | null>(null);
-  const lastScrollTop = useRef(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScroll = window.scrollY;
-      const isDown = currentScroll > lastScrollTop.current;
-      if (isDown && currentScroll > 80) {
-        setIsFilterFixed(true);
-      } else if (!isDown) {
-        setIsFilterFixed(false);
-      }
-      lastScrollTop.current = currentScroll;
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const categoryBarAnchorRef = useRef<HTMLDivElement | null>(null);
+  const isFirstRender = useRef(true);
 
   const categories = useMemo(() => ['All', ...Array.from(new Set(items.map((m) => m.category).filter(Boolean)))], [items]);
   const filtered = useMemo(
     () => (activeCategory === 'All' ? items : items.filter((m) => m.category === activeCategory)),
     [activeCategory, items],
   );
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const anchor = categoryBarAnchorRef.current;
+    if (!anchor) return;
+
+    const anchorTop = anchor.getBoundingClientRect().top + window.scrollY;
+    if (window.scrollY > anchorTop) {
+      window.scrollTo({ top: anchorTop, behavior: 'smooth' });
+    }
+  }, [activeCategory]);
 
   const handleTouchStart = (event: React.TouchEvent) => {
     touchStartX.current = event.touches[0]?.clientX ?? null;
@@ -80,42 +79,67 @@ export const MenuPageClient = ({ items }: { items: MenuItem[] }) => {
         <p className="text-sm text-gray-400 font-medium uppercase tracking-[0.3em] mb-6 md:hidden">
           {lang === 'de' ? 'Wische nach links oder rechts, um Kategorien zu wechseln' : 'Swipe left or right to browse categories'}
         </p>
+      </div>
 
-        <div className="relative">
-          <div
-            className={`left-0 right-0 mx-auto w-full max-w-5xl px-4 md:px-20 transition-all duration-300 ease-out ${
-              isFilterFixed ? 'fixed top-0 z-50' : 'relative'
-            }`}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            <div className="rounded-full border border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur-md">
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                {categories.map((category) => {
-                  const isActive = activeCategory === category;
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => setActiveCategory(category)}
-                      className={`whitespace-nowrap rounded-full px-4 py-3 text-[10px] font-black uppercase tracking-[0.25em] transition-all duration-300 md:px-6 ${
-                        isActive
-                          ? 'bg-black text-white shadow-md'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black'
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+      <div ref={categoryBarAnchorRef} />
+
+      {/* Desktop / tablet pill filter */}
+      <div
+        className="sticky top-0 z-50 mx-auto mb-16 hidden w-full max-w-5xl px-20 py-2 md:block"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="rounded-full border border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur-md">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {categories.map((category) => {
+              const isActive = activeCategory === category;
+              return (
+                <button
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`whitespace-nowrap rounded-full px-6 py-3 text-[10px] font-black uppercase tracking-[0.25em] transition-all duration-300 ${
+                    isActive
+                      ? 'bg-black text-white shadow-md'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black'
+                  }`}
+                >
+                  {category}
+                </button>
+              );
+            })}
           </div>
-
-          {isFilterFixed && <div className="h-[90px] md:h-[90px]" />}
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {/* Mobile underline tab filter */}
+      <div
+        className="sticky top-0 z-50 -mx-4 mb-4 border-b border-gray-200 bg-white/95 px-4 backdrop-blur-md md:hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="flex gap-6 overflow-x-auto scrollbar-hide">
+          {categories.map((category) => {
+            const isActive = activeCategory === category;
+            return (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`whitespace-nowrap border-b-2 py-4 text-xs font-black uppercase tracking-wide transition-colors duration-200 ${
+                  isActive ? 'border-black text-black' : 'border-transparent text-gray-400'
+                }`}
+              >
+                {category}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mb-4 px-1 md:hidden">
+        <h3 className="text-sm font-black uppercase tracking-[0.15em] text-slate-900">{activeCategory}</h3>
+      </div>
+
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-0 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((item) => (
           <MenuCard key={item.id} item={item} onOpenDetail={setSelectedItem} />
         ))}

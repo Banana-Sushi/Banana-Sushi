@@ -43,7 +43,7 @@ export const MenuCard = ({ item, onOpenDetail }: Props) => {
 
   return (
     <div
-      className="group h-full cursor-pointer overflow-hidden rounded-[2rem] border border-gray-200 bg-white text-slate-900 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+      className="group h-full cursor-pointer overflow-hidden text-slate-900 transition-all duration-300 md:rounded-[2rem] md:border md:border-gray-200 md:bg-white md:shadow-sm md:hover:-translate-y-1 md:hover:shadow-xl"
       onClick={() => onOpenDetail?.(item)}
     >
       <div className="hidden md:block">
@@ -98,64 +98,43 @@ export const MenuCard = ({ item, onOpenDetail }: Props) => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 p-5 md:hidden">
-        <div className="relative h-40 w-full overflow-hidden rounded-[2rem] bg-gray-100">
+      <div className="flex items-center gap-4 border-b border-gray-100 py-5 md:hidden">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-black uppercase tracking-tight text-slate-900">
+            {item.name[lang]}
+          </h3>
+          <p className="mt-1 line-clamp-1 text-xs font-semibold text-gray-400">
+            {item.description[lang]}
+          </p>
+          <div className="mt-2">
+            {hasDiscount ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-gray-300 line-through">{item.price.toFixed(2)}€</span>
+                <span className="text-sm font-black text-amber-600">{discountedPrice.toFixed(2)}€</span>
+              </div>
+            ) : (
+              <span className="text-sm font-black text-amber-600">{item.price.toFixed(2)}€</span>
+            )}
+          </div>
+        </div>
+
+        <div className="relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-2xl bg-yellow-50">
           {item.image ? (
             <Image
               src={item.image}
               alt={item.name[lang]}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-110"
-              sizes="(max-width: 768px) 100vw"
+              className="object-cover"
+              sizes="112px"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gray-200">
-              <span className="text-5xl text-gray-400">🍽</span>
-            </div>
+            <div className="flex h-full w-full items-center justify-center text-3xl text-gray-300">🍽</div>
           )}
-          {hasDiscount && !isTwoForOne && (
-            <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500 shadow-sm">
+          {(hasDiscount || isTwoForOne) && (
+            <div className="absolute left-1 top-1 rounded-full bg-white/90 px-2 py-0.5 text-[8px] font-black uppercase tracking-tight text-yellow-500 shadow-sm">
               {discountLabel}
             </div>
           )}
-          {isTwoForOne && (
-            <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500 shadow-sm">
-              {discountLabel}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-1 flex-col justify-between gap-4">
-          <div>
-            <div className="mb-3 inline-flex rounded-full bg-black/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-              {item.category}
-            </div>
-            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 line-clamp-2">
-              {item.name[lang]}
-            </h3>
-            <p className="mt-3 text-sm font-bold uppercase leading-relaxed tracking-tight text-slate-500 line-clamp-2">
-              {item.description[lang]}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between gap-4 pt-2">
-            <div>
-              {hasDiscount ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-slate-400 line-through">{item.price.toFixed(2)}€</span>
-                  <span className="text-lg font-black text-slate-900">{discountedPrice.toFixed(2)}€</span>
-                </div>
-              ) : (
-                <span className="text-lg font-black text-slate-900">{item.price.toFixed(2)}€</span>
-              )}
-            </div>
-            <button
-              onClick={handleAddToCart}
-              className="rounded-full bg-black px-4 py-3 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-yellow-400 hover:text-black"
-            >
-              {hasAddons ? (lang === 'de' ? 'Optionen wählen' : 'Choose Options') : t.menu.addToCart}
-            </button>
-          </div>
         </div>
       </div>
     </div>
