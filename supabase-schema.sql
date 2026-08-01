@@ -190,6 +190,8 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
 
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id);
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS discount_emails_consent BOOLEAN DEFAULT false;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_reset_token   TEXT;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;
 
 GRANT ALL ON TABLE customers          TO postgres, anon, authenticated, service_role;
 GRANT ALL ON TABLE customer_addresses TO postgres, anon, authenticated, service_role;

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAppContext } from '@/context/AppContext';
+import { Icons } from '@/components/Icons';
 
 const PASSWORD_RULES = [
   { key: 'length',  label: { de: 'Mindestens 8 Zeichen',       en: 'At least 8 characters'        }, test: (p: string) => p.length >= 8 },
@@ -40,6 +41,8 @@ export default function AccountRegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,14 +157,24 @@ export default function AccountRegisterPage() {
 
           {/* Password */}
           <div>
-            <input
-              required
-              type="password"
-              placeholder={t.account.password}
-              value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              className={`${inputClass} ${passwordTouched && !isPasswordValid(form.password) ? 'border-orange-300' : passwordTouched && isPasswordValid(form.password) ? 'border-green-300' : ''}`}
-            />
+            <div className="relative">
+              <input
+                required
+                type={showPassword ? 'text' : 'password'}
+                placeholder={t.account.password}
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                className={`${inputClass} pr-14 ${passwordTouched && !isPasswordValid(form.password) ? 'border-orange-300' : passwordTouched && isPasswordValid(form.password) ? 'border-green-300' : ''}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                tabIndex={-1}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-black transition-colors"
+              >
+                {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+              </button>
+            </div>
 
             {/* Strength bar */}
             {passwordTouched && (
@@ -195,19 +208,25 @@ export default function AccountRegisterPage() {
           <div className="relative">
             <input
               required
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               placeholder={t.account.confirmPassword}
               value={form.confirmPassword}
               onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-              className={`${inputClass} ${passwordMatchFail ? 'border-red-300' : passwordMatchOk ? 'border-green-300' : ''}`}
+              className={`${inputClass} ${passwordMatchOk ? 'pr-20' : 'pr-14'} ${passwordMatchFail ? 'border-red-300' : passwordMatchOk ? 'border-green-300' : ''}`}
             />
             {passwordMatchOk && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+              <span className="absolute right-12 top-1/2 -translate-y-1/2 text-green-500">
+                <Icons.Check />
               </span>
             )}
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(v => !v)}
+              tabIndex={-1}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-black transition-colors"
+            >
+              {showConfirmPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+            </button>
           </div>
           {passwordMatchFail && (
             <p className="text-red-500 text-[11px] font-black uppercase tracking-widest -mt-1">{t.account.passwordMismatch}</p>

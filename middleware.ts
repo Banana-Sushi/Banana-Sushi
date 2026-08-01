@@ -12,7 +12,7 @@ const ADMIN_ONLY = [
   '/dashboard/qrcode',
 ];
 
-const ACCOUNT_PUBLIC = ['/account/login', '/account/register', '/account/verify'];
+const ACCOUNT_PUBLIC = ['/account/login', '/account/register', '/account/verify', '/account/forgot-password', '/account/reset-password'];
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
+import { Icons } from '@/components/Icons';
 
 function LoginForm() {
   const { t, lang } = useAppContext();
@@ -12,6 +13,7 @@ function LoginForm() {
   const redirect = searchParams.get('redirect') ?? '/account';
 
   const [form, setForm] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -100,15 +102,31 @@ function LoginForm() {
             disabled={isLocked}
             className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
           />
-          <input
-            required
-            type="password"
-            placeholder={t.account.password}
-            value={form.password}
-            onChange={e => setForm({ ...form, password: e.target.value })}
-            disabled={isLocked}
-            className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-          />
+          <div className="relative">
+            <input
+              required
+              type={showPassword ? 'text' : 'password'}
+              placeholder={t.account.password}
+              value={form.password}
+              onChange={e => setForm({ ...form, password: e.target.value })}
+              disabled={isLocked}
+              className={`${inputClass} pr-14 disabled:opacity-50 disabled:cursor-not-allowed`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              tabIndex={-1}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-black transition-colors"
+            >
+              {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+            </button>
+          </div>
+
+          <div className="text-right -mt-1">
+            <Link href="/account/forgot-password" className="text-gray-400 text-xs font-bold underline underline-offset-2 hover:text-black transition-colors">
+              {t.account.forgotPassword}
+            </Link>
+          </div>
 
           {/* Remaining attempts warning */}
           {remaining !== null && remaining <= 3 && remaining > 0 && !isLocked && (

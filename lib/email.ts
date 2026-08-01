@@ -151,6 +151,52 @@ export async function sendVerificationEmail(email: string, firstName: string, to
   });
 }
 
+// ─── Password Reset ────────────────────────────────────────────────────────────
+
+export async function sendPasswordResetEmail(email: string, firstName: string, token: string) {
+  const baseUrl = getPublicUrl();
+  const resetUrl = `${baseUrl}/account/reset-password?token=${encodeURIComponent(token)}`;
+  const logo = getLogoAttachment();
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f9f9f9;margin:0;padding:0;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:#ffffff;padding:32px 40px;text-align:center;border-bottom:3px solid #fbbf24;">
+      <img src="cid:logo@sushibanana" alt="Sushi Banana" style="height:52px;width:auto;display:block;margin:0 auto;" />
+    </div>
+    <div style="padding:40px;">
+      <h2 style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;margin-bottom:8px;">
+        Hallo, ${firstName}!
+      </h2>
+      <p style="color:#6b7280;font-size:14px;line-height:1.6;margin-bottom:32px;">
+        Du hast eine Zurücksetzung deines Passworts angefordert. Klicke auf den Button unten, um ein neues Passwort festzulegen. Dieser Link ist 1 Stunde gültig.
+      </p>
+      <a href="${resetUrl}" style="display:inline-block;background:#000000;color:#ffffff;padding:16px 32px;border-radius:100px;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:0.2em;text-decoration:none;">
+        Passwort zurücksetzen
+      </a>
+      <p style="color:#9ca3af;font-size:12px;margin-top:32px;line-height:1.6;">
+        Falls du keine Zurücksetzung angefordert hast, kannst du diese E-Mail ignorieren.
+      </p>
+      <hr style="border:none;border-top:1px solid #f3f4f6;margin:24px 0;">
+      <p style="color:#d1d5db;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin:0;">
+        Unter den Eichen 84a, 12205 Berlin
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  await transporter.sendMail({
+    from: `"Sushi Banana" <${process.env.GMAIL_USER}>`,
+    to: email,
+    subject: 'Passwort zurücksetzen · Sushi Banana',
+    html,
+    attachments: logo ? [logo] : [],
+  });
+}
+
 // ─── Discount Notification ────────────────────────────────────────────────────
 
 type DiscountRecipient = { email: string; first_name: string };
