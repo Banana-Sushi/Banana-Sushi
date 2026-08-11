@@ -10,7 +10,6 @@ import { MenuItem } from '@/types';
 
 export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; categoryOrder: string[] }) => {
   const { t, lang } = useAppContext();
-  const [activeCategory, setActiveCategory] = useState('All');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const touchStartX = useRef<number | null>(null);
   const categoryBarAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -22,10 +21,11 @@ export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; ca
     const present = new Set(items.map((m) => m.category).filter(Boolean));
     const ordered = categoryOrder.filter((c) => present.has(c));
     const unordered = Array.from(present).filter((c) => !categoryOrder.includes(c));
-    return ['All', ...ordered, ...unordered];
+    return [...ordered, ...unordered];
   }, [items, categoryOrder]);
+  const [activeCategory, setActiveCategory] = useState(() => categories[0] ?? '');
   const filtered = useMemo(
-    () => (activeCategory === 'All' ? items : items.filter((m) => m.category === activeCategory)),
+    () => items.filter((m) => m.category === activeCategory),
     [activeCategory, items],
   );
 
