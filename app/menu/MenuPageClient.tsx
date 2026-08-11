@@ -13,8 +13,6 @@ export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; ca
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const categoryBarAnchorRef = useRef<HTMLDivElement | null>(null);
   const isFirstRender = useRef(true);
-  const endOfListRef = useRef<HTMLDivElement | null>(null);
-  const hasLeftTopRef = useRef(false);
 
   const categories = useMemo(() => {
     const present = new Set(items.map((m) => m.category).filter(Boolean));
@@ -42,32 +40,6 @@ export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; ca
       window.scrollTo({ top: anchorTop, behavior: 'smooth' });
     }
   }, [activeCategory]);
-
-  useEffect(() => {
-    hasLeftTopRef.current = false;
-    const node = endOfListRef.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) {
-          hasLeftTopRef.current = true;
-          return;
-        }
-
-        if (!hasLeftTopRef.current) return;
-
-        const currentIndex = categories.indexOf(activeCategory);
-        if (currentIndex < categories.length - 1) {
-          setActiveCategory(categories[currentIndex + 1]);
-        }
-      },
-      { threshold: 0 },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [activeCategory, categories]);
 
   return (
     <div className="pt-[100px] md:pt-[130px] px-4 md:px-20 pb-32 animate-fade-in">
@@ -138,8 +110,6 @@ export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; ca
           <MenuCard key={item.id} item={item} onOpenDetail={setSelectedItem} />
         ))}
       </div>
-
-      <div ref={endOfListRef} />
 
       {filtered.length === 0 && (
         <p className="py-20 text-center text-lg font-black uppercase tracking-[0.3em] text-gray-300">
