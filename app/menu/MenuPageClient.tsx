@@ -11,7 +11,6 @@ import { MenuItem } from '@/types';
 export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; categoryOrder: string[] }) => {
   const { t, lang } = useAppContext();
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const touchStartX = useRef<number | null>(null);
   const categoryBarAnchorRef = useRef<HTMLDivElement | null>(null);
   const isFirstRender = useRef(true);
   const endOfListRef = useRef<HTMLDivElement | null>(null);
@@ -70,35 +69,8 @@ export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; ca
     return () => observer.disconnect();
   }, [activeCategory, categories]);
 
-  const handleTouchStart = (event: React.TouchEvent) => {
-    touchStartX.current = event.touches[0]?.clientX ?? null;
-  };
-
-  const handleTouchEnd = (event: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-
-    const deltaX = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
-    if (Math.abs(deltaX) < 60) {
-      touchStartX.current = null;
-      return;
-    }
-
-    const currentIndex = categories.indexOf(activeCategory);
-    if (deltaX < 0 && currentIndex < categories.length - 1) {
-      setActiveCategory(categories[currentIndex + 1]);
-    } else if (deltaX > 0 && currentIndex > 0) {
-      setActiveCategory(categories[currentIndex - 1]);
-    }
-
-    touchStartX.current = null;
-  };
-
   return (
-    <div
-      className="pt-[100px] md:pt-[130px] px-4 md:px-20 pb-32 animate-fade-in"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="pt-[100px] md:pt-[130px] px-4 md:px-20 pb-32 animate-fade-in">
       <div className="max-w-7xl mx-auto mb-8 md:mb-12">
         <Link href="/" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
           <Icons.ArrowLeft /> {lang === 'de' ? 'Zurück' : 'Back'}
@@ -109,19 +81,12 @@ export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; ca
         <h2 className="text-4xl sm:text-5xl md:text-[6rem] lg:text-[8rem] font-black uppercase mb-8 md:mb-10 tracking-tighter leading-none">
           {t.menu.title}
         </h2>
-        <p className="text-sm text-gray-400 font-medium uppercase tracking-[0.3em] mb-6 md:hidden">
-          {lang === 'de' ? 'Wische nach links oder rechts, um Kategorien zu wechseln' : 'Swipe left or right to browse categories'}
-        </p>
       </div>
 
       <div ref={categoryBarAnchorRef} />
 
       {/* Desktop / tablet pill filter */}
-      <div
-        className="sticky top-0 z-50 mx-auto mb-16 hidden w-full max-w-5xl px-20 py-2 md:block"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="sticky top-0 z-50 mx-auto mb-16 hidden w-full max-w-5xl px-20 py-2 md:block">
         <div className="rounded-full border border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur-md">
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {categories.map((category) => {
@@ -145,11 +110,7 @@ export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; ca
       </div>
 
       {/* Mobile underline tab filter */}
-      <div
-        className="sticky top-0 z-50 -mx-4 mb-4 border-b border-gray-200 bg-white/95 px-4 backdrop-blur-md md:hidden"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="sticky top-0 z-50 -mx-4 mb-4 border-b border-gray-200 bg-white/95 px-4 backdrop-blur-md md:hidden">
         <div className="flex gap-6 overflow-x-auto scrollbar-hide">
           {categories.map((category) => {
             const isActive = activeCategory === category;
