@@ -63,7 +63,7 @@ export function DashboardNotificationProvider({ children }: { children: React.Re
   const seededRef = useRef(false);
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
-  const { markNewOrder } = useDashboardOrders();
+  const { markNewOrder, markSessionExpired, clearSessionExpired } = useDashboardOrders();
 
   useEffect(() => {
     pathnameRef.current = pathname;
@@ -95,7 +95,9 @@ export function DashboardNotificationProvider({ children }: { children: React.Re
     const checkForMissedOrders = async () => {
       try {
         const res = await fetch('/api/orders');
+        if (res.status === 401) { markSessionExpired(); return; }
         if (!res.ok) return;
+        clearSessionExpired();
         const orders = await res.json();
         if (!Array.isArray(orders)) return;
         if (!seededRef.current) {

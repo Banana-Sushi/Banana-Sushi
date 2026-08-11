@@ -3,6 +3,7 @@ import { verifyToken } from '@/lib/auth';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardSidebarMobile } from '@/components/dashboard/DashboardSidebarMobile';
 import { DashboardNotificationProvider } from '@/components/dashboard/DashboardNotificationProvider';
+import { SessionExpiredModal } from '@/components/dashboard/SessionExpiredModal';
 import { DashboardOrdersProvider } from '@/context/DashboardOrdersContext';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -16,9 +17,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <DashboardOrdersProvider>
         <DashboardSidebar role={role} />
         <DashboardSidebarMobile role={role} />
-        <DashboardNotificationProvider>
+        {user ? (
+          <DashboardNotificationProvider>
+            <div className="animate-fade-in">{children}</div>
+          </DashboardNotificationProvider>
+        ) : (
           <div className="animate-fade-in">{children}</div>
-        </DashboardNotificationProvider>
+        )}
+        {user && <SessionExpiredModal />}
       </DashboardOrdersProvider>
     </div>
   );

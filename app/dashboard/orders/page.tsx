@@ -5,6 +5,7 @@ import { useAppContext } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { Icons } from '@/components/Icons';
 import { Order } from '@/types';
+import { useDashboardOrders } from '@/context/DashboardOrdersContext';
 
 
 function mapOrder(raw: any): Order {
@@ -79,6 +80,7 @@ function orderBarColor(order: Order) {
 
 export default function OrdersPage() {
   const { t, addToast } = useAppContext();
+  const { markSessionExpired, clearSessionExpired } = useDashboardOrders();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<'all' | 'processing' | 'completed'>('all');
   const [loading, setLoading] = useState(true);
@@ -92,17 +94,20 @@ export default function OrdersPage() {
     try {
       const res = await fetch('/api/orders');
       if (res.ok) {
+        clearSessionExpired();
         const data = await res.json();
         const mapped = Array.isArray(data) ? data.map(mapOrder) : [];
         setOrders(mapped);
         mapped.forEach((o: Order) => seenOrderIds.current.add(o.id));
+      } else if (res.status === 401) {
+        markSessionExpired();
       }
     } catch (error) {
       console.error('Failed to refresh orders', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [markSessionExpired, clearSessionExpired]);
 
   useEffect(() => {
     void fetchOrders();
