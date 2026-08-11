@@ -8,15 +8,22 @@ import { MenuItemModal } from '@/components/MenuItemModal';
 import { Icons } from '@/components/Icons';
 import { MenuItem } from '@/types';
 
-export const MenuPageClient = ({ items }: { items: MenuItem[] }) => {
+export const MenuPageClient = ({ items, categoryOrder }: { items: MenuItem[]; categoryOrder: string[] }) => {
   const { t, lang } = useAppContext();
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const touchStartX = useRef<number | null>(null);
   const categoryBarAnchorRef = useRef<HTMLDivElement | null>(null);
   const isFirstRender = useRef(true);
+  const endOfListRef = useRef<HTMLDivElement | null>(null);
+  const hasLeftTopRef = useRef(false);
 
-  const categories = useMemo(() => ['All', ...Array.from(new Set(items.map((m) => m.category).filter(Boolean)))], [items]);
+  const categories = useMemo(() => {
+    const present = new Set(items.map((m) => m.category).filter(Boolean));
+    const ordered = categoryOrder.filter((c) => present.has(c));
+    const unordered = Array.from(present).filter((c) => !categoryOrder.includes(c));
+    return ['All', ...ordered, ...unordered];
+  }, [items, categoryOrder]);
   const filtered = useMemo(
     () => (activeCategory === 'All' ? items : items.filter((m) => m.category === activeCategory)),
     [activeCategory, items],
@@ -36,6 +43,32 @@ export const MenuPageClient = ({ items }: { items: MenuItem[] }) => {
       window.scrollTo({ top: anchorTop, behavior: 'smooth' });
     }
   }, [activeCategory]);
+
+  useEffect(() => {
+    hasLeftTopRef.current = false;
+    const node = endOfListRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          hasLeftTopRef.current = true;
+          return;
+        }
+
+        if (!hasLeftTopRef.current) return;
+
+        const currentIndex = categories.indexOf(activeCategory);
+        if (currentIndex < categories.length - 1) {
+          setActiveCategory(categories[currentIndex + 1]);
+        }
+      },
+      { threshold: 0 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [activeCategory, categories]);
 
   const handleTouchStart = (event: React.TouchEvent) => {
     touchStartX.current = event.touches[0]?.clientX ?? null;
@@ -144,6 +177,8 @@ export const MenuPageClient = ({ items }: { items: MenuItem[] }) => {
           <MenuCard key={item.id} item={item} onOpenDetail={setSelectedItem} />
         ))}
       </div>
+
+      <div ref={endOfListRef} />
 
       {filtered.length === 0 && (
         <p className="py-20 text-center text-lg font-black uppercase tracking-[0.3em] text-gray-300">

@@ -96,6 +96,12 @@ export interface Order {
   couponDiscount?: number;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
 export interface DeliveryZone {
   id: string;
   maxDistanceKm: number;

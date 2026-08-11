@@ -60,6 +60,7 @@ function isNewlyProcessing(order: { status?: string }): boolean {
 
 export function DashboardNotificationProvider({ children }: { children: React.ReactNode }) {
   const alertedOrderIds = useRef<Set<string>>(new Set());
+  const seededRef = useRef(false);
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   const { markNewOrder } = useDashboardOrders();
@@ -86,15 +87,48 @@ export function DashboardNotificationProvider({ children }: { children: React.Re
       }
     };
 
+    // Realtime postgres_changes events don't replay if the tab's WebSocket
+    // was briefly disconnected (sleep/wake, wifi blip, backgrounded tab) when
+    // an order came in — that alert is then lost for good. This poll is a
+    // backstop: it re-checks for any 'processing' order we haven't alerted on
+    // yet, catching whatever the socket missed.
+    const checkForMissedOrders = async () => {
+      try {
+        const res = await fetch('/api/orders');
+        if (!res.ok) return;
+        const orders = await res.json();
+        if (!Array.isArray(orders)) return;
+        if (!seededRef.current) {
+          // Don't alert for orders that were already processing before the dashboard opened.
+          orders.forEach((o: any) => { if (o?.id && isNewlyProcessing(o)) alertedOrderIds.current.add(o.id); });
+          seededRef.current = true;
+          return;
+        }
+        orders.forEach(alertOnce);
+      } catch {}
+    };
+
+    void checkForMissedOrders();
+
     const channel = supabase
       .channel('dashboard-order-alerts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, ({ new: order }) => alertOnce(order))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, ({ new: order }) => alertOnce(order))
       .subscribe();
 
+    const poller = window.setInterval(() => { void checkForMissedOrders(); }, 20000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void checkForMissedOrders();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
     return () => {
       document.removeEventListener('click', unlockAudioContext);
       document.removeEventListener('keydown', unlockAudioContext);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+      window.clearInterval(poller);
       supabase.removeChannel(channel);
     };
   }, []);

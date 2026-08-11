@@ -239,3 +239,23 @@ CREATE TABLE IF NOT EXISTS financial_reports (
   report_data  JSONB         NOT NULL
 );
 GRANT ALL ON TABLE financial_reports TO postgres, anon, authenticated, service_role;
+
+-- ============================================================
+--  MENU CATEGORY ORDER
+--  Controls the order categories appear in on the /menu page.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS categories (
+  id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  name       TEXT        UNIQUE NOT NULL,
+  sort_order INTEGER     NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+GRANT ALL ON TABLE categories TO postgres, anon, authenticated, service_role;
+
+-- Seed from the categories actually in use on menu_items right now,
+-- rather than a hardcoded list, so nothing gets missed or mismatched.
+INSERT INTO categories (name, sort_order)
+SELECT category, ROW_NUMBER() OVER (ORDER BY category) - 1
+FROM (SELECT DISTINCT category FROM menu_items WHERE category IS NOT NULL) AS c
+ON CONFLICT (name) DO NOTHING;

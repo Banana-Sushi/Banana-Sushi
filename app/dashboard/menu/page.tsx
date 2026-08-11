@@ -43,6 +43,11 @@ export default function MenuManagementPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [orderOpen, setOrderOpen] = useState(false);
+  const [draftOrder, setDraftOrder] = useState<string[]>([]);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [positionDrafts, setPositionDrafts] = useState<Record<string, string>>({});
 
   const fetchMenu = async () => {
     const res = await fetch('/api/menu');
@@ -50,7 +55,81 @@ export default function MenuManagementPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchMenu(); }, []);
+  const fetchCategoryOrder = async () => {
+    const res = await fetch('/api/categories');
+    if (res.ok) {
+      const data: { name: string }[] = await res.json();
+      setCategoryOrder(data.map(c => c.name));
+    }
+  };
+
+  useEffect(() => { fetchMenu(); fetchCategoryOrder(); }, []);
+
+  // Categories used by items but not yet known to the category-order table
+  // 'All' is excluded — it's a reserved pseudo-category for the "show everything" filter on the public menu page
+  const knownCategories = new Set(categoryOrder);
+  const savedCategoryList = [
+    ...categoryOrder,
+    ...Array.from(new Set(items.map(i => i.category))).filter(c => !knownCategories.has(c)),
+  ].filter(c => c !== 'All');
+
+  const openOrderPanel = () => {
+    setDraftOrder(savedCategoryList);
+    setOrderOpen(true);
+  };
+
+  const closeOrderPanel = () => {
+    setOrderOpen(false);
+    setDraftOrder([]);
+    setPositionDrafts({});
+  };
+
+  const moveCategory = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= draftOrder.length) return;
+    const next = [...draftOrder];
+    [next[index], next[target]] = [next[target], next[index]];
+    setDraftOrder(next);
+  };
+
+  const commitCategoryPosition = (category: string, rawValue: string) => {
+    setPositionDrafts(prev => {
+      const next = { ...prev };
+      delete next[category];
+      return next;
+    });
+
+    const parsed = parseInt(rawValue, 10);
+    if (!Number.isFinite(parsed)) return;
+
+    const currentIndex = draftOrder.indexOf(category);
+    const targetIndex = Math.min(Math.max(parsed - 1, 0), draftOrder.length - 1);
+    if (currentIndex === -1 || targetIndex === currentIndex) return;
+
+    const next = [...draftOrder];
+    next.splice(currentIndex, 1);
+    next.splice(targetIndex, 0, category);
+    setDraftOrder(next);
+  };
+
+  const handleSaveOrder = async () => {
+    setSavingOrder(true);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: draftOrder }),
+      });
+      if (!res.ok) throw new Error();
+      setCategoryOrder(draftOrder);
+      addToast('Category order saved', 'success');
+      closeOrderPanel();
+    } catch {
+      addToast('Failed to save category order', 'error');
+    } finally {
+      setSavingOrder(false);
+    }
+  };
 
   const openNew = () => {
     setForm(EMPTY_FORM);
@@ -202,6 +281,85 @@ export default function MenuManagementPage() {
           <Icons.Plus /> {t.dashboard.addNewItem}
         </button>
       </div>
+
+      {savedCategoryList.length > 0 && (
+        <div className="mb-10 bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => (orderOpen ? closeOrderPanel() : openOrderPanel())}
+            className="w-full flex items-center justify-between gap-4 p-6 text-left"
+          >
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest">Category Order</h3>
+              <p className="text-[10px] text-gray-400 font-bold mt-1">Controls the order categories appear in on the menu page.</p>
+            </div>
+            <span className={`transition-transform duration-200 shrink-0 ${orderOpen ? '' : 'rotate-180'}`}>
+              <Icons.ChevronUp />
+            </span>
+          </button>
+
+          {orderOpen && (
+            <div className="px-6 pb-6">
+              <p className="text-[10px] text-gray-400 font-bold mb-4">Type a position number to jump a category there, or use the arrows to nudge it by one.</p>
+              <div className="flex flex-col gap-1.5 mb-5">
+                {draftOrder.map((category, index) => (
+                  <div key={category} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2.5">
+                    <input
+                      type="number"
+                      min={1}
+                      max={draftOrder.length}
+                      disabled={savingOrder}
+                      value={positionDrafts[category] ?? String(index + 1)}
+                      onChange={e => setPositionDrafts(prev => ({ ...prev, [category]: e.target.value }))}
+                      onBlur={e => commitCategoryPosition(category, e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                      className="w-12 text-center bg-white border border-gray-200 rounded-lg py-1.5 text-xs font-black outline-none focus:border-black disabled:opacity-50"
+                      aria-label={`Position for ${category}`}
+                    />
+                    <span className="flex-1 text-xs font-black uppercase truncate">{category}</span>
+                    <button
+                      type="button"
+                      onClick={() => moveCategory(index, -1)}
+                      disabled={index === 0 || savingOrder}
+                      className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-20 disabled:pointer-events-none transition-all"
+                      aria-label="Move up"
+                    >
+                      <Icons.ChevronUp />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveCategory(index, 1)}
+                      disabled={index === draftOrder.length - 1 || savingOrder}
+                      className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-20 disabled:pointer-events-none transition-all rotate-180"
+                      aria-label="Move down"
+                    >
+                      <Icons.ChevronUp />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleSaveOrder}
+                  disabled={savingOrder}
+                  className="flex-1 bg-black text-white py-3.5 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-yellow-500 hover:text-black transition-all disabled:opacity-50"
+                >
+                  {savingOrder ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeOrderPanel}
+                  disabled={savingOrder}
+                  className="px-6 py-3.5 rounded-xl bg-gray-100 text-gray-500 font-black uppercase tracking-widest text-[10px] hover:bg-gray-200 transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-20">

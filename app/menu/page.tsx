@@ -4,11 +4,12 @@ import { MenuItem } from '@/types';
 
 export default async function MenuPage() {
   const supabase = createServerSupabaseClient();
-  const { data } = await supabase
-    .from('menu_items')
-    .select('*')
-    .eq('is_available', true)
-    .order('category');
+  const [{ data }, { data: categoryRows }] = await Promise.all([
+    supabase.from('menu_items').select('*').eq('is_available', true).order('category'),
+    supabase.from('categories').select('name').order('sort_order', { ascending: true }),
+  ]);
+
+  const categoryOrder: string[] = (categoryRows ?? []).map((row: any) => row.name);
 
   const items: MenuItem[] = (data ?? []).map((item: any) => ({
     id: item.id,
@@ -23,5 +24,5 @@ export default async function MenuPage() {
     addonsMandatory: item.addons_mandatory ?? [],
   }));
 
-  return <MenuPageClient items={items} />;
+  return <MenuPageClient items={items} categoryOrder={categoryOrder} />;
 }
