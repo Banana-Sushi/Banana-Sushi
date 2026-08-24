@@ -112,9 +112,11 @@ export default function OrderPage() {
 
       try {
         const postalCodesRes = await fetch('/api/delivery-postal-codes');
-        const postalCodes = await postalCodesRes.json();
-        const postalCodeOverride = findPostalCodeOverride(zip, postalCodes);
-        if (postalCodeOverride) {
+        const postalCodes = postalCodesRes.ok ? await postalCodesRes.json() : [];
+        const postalCodeOverride = Array.isArray(postalCodes)
+          ? findPostalCodeOverride(zip, postalCodes)
+          : null;
+        if (active && postalCodeOverride) {
           setDeliveryFee(postalCodeOverride.fee);
           setFeeStatus('ready');
           return;
@@ -144,6 +146,7 @@ export default function OrderPage() {
         setFeeStatus('ready');
       } catch {
         if (!active) return;
+        setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
         setFeeStatus('idle');
       }
     }, 350);
@@ -297,8 +300,10 @@ export default function OrderPage() {
       setCheckingAddress(true);
       try {
         const postalCodesRes = await fetch('/api/delivery-postal-codes');
-        const postalCodes = await postalCodesRes.json();
-        const postalCodeOverride = findPostalCodeOverride(form.zip, postalCodes);
+        const postalCodes = postalCodesRes.ok ? await postalCodesRes.json() : [];
+        const postalCodeOverride = Array.isArray(postalCodes)
+          ? findPostalCodeOverride(form.zip, postalCodes)
+          : null;
         let computedFee: number;
 
         if (postalCodeOverride) {
