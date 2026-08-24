@@ -65,6 +65,15 @@ export default function OrderPage() {
     return date && time ? `${date} ${time}` : value;
   };
 
+  const MIN_SCHEDULED_LEAD_MINUTES = 50;
+
+  const toDatetimeLocalValue = (date: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const minScheduledTime = toDatetimeLocalValue(new Date(Date.now() + MIN_SCHEDULED_LEAD_MINUTES * 60 * 1000));
+
   // Load customer session
   useEffect(() => {
     fetch('/api/customer/me')
@@ -193,6 +202,12 @@ export default function OrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
+
+    if (form.scheduledTime && form.scheduledTime < minScheduledTime) {
+      setShowScheduledTimeError(true);
+      return;
+    }
+
     setLoading(true);
     setDeliveryFee(null);
     setFeeStatus('pending');
@@ -526,7 +541,7 @@ export default function OrderPage() {
         </div>
 
         {/* Order form */}
-        <form onSubmit={handleSubmit} className="w-full xl:w-[400px] shrink-0 space-y-5 bg-gray-50 p-8 md:p-10 rounded-[2.5rem]">
+        <form onSubmit={handleSubmit} noValidate className="w-full xl:w-[400px] shrink-0 space-y-5 bg-gray-50 p-8 md:p-10 rounded-[2.5rem]">
 
           {/* Delivery mode choice */}
           <div className="space-y-3">
@@ -670,6 +685,7 @@ export default function OrderPage() {
               type="datetime-local"
               value={form.scheduledTime}
               onChange={e => setForm({ ...form, scheduledTime: e.target.value })}
+              min={minScheduledTime}
               placeholder="Select date and time"
               className="hidden md:block w-full p-4 rounded-[32px] border border-neutral-200 bg-white text-black text-sm font-bold shadow-sm outline-none transition focus:border-black"
             />

@@ -33,8 +33,12 @@ export function playOrderBeep() {
   try {
     const ctx = audioContext ?? (audioContext = new AudioContext());
     const now = ctx.currentTime;
-    playTone(ctx, 880,  now,        0.6, 0.4);  // A5 — first tone
-    playTone(ctx, 1320, now + 0.55, 1.4, 0.35); // E6 — second tone, higher, long decay
+    playTone(ctx, 880,  now,        0.6, 0.7);  // A5
+    playTone(ctx, 1320, now + 0.6,  0.6, 0.7);  // E6
+    playTone(ctx, 880,  now + 1.2,  0.6, 0.7);  // A5
+    playTone(ctx, 1320, now + 1.8,  0.6, 0.7);  // E6
+    playTone(ctx, 880,  now + 2.4,  0.6, 0.7);  // A5
+    playTone(ctx, 1320, now + 3.0,  1.6, 0.6);  // E6 — final tone, long decay
   } catch {}
 }
 
