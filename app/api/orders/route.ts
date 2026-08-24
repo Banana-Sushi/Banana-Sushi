@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { verifyToken } from '@/lib/auth';
 import { generateOrderNumber } from '@/lib/order-number';
 import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG } from '@/lib/distance';
-import { getDeliveryZoneForDistance } from '@/lib/delivery-zones';
+import { getDeliveryZoneForDistance, findPostalCodeOverride } from '@/lib/delivery-zones';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 async function validateCoupon(supabase: SupabaseClient, code: string, email: string, subtotal: number) {
@@ -68,20 +68,33 @@ export async function POST(req: NextRequest) {
 
   if (isDelivery && body.address && body.zipCode && body.city) {
     try {
-      const coords = await geocodeAddress(body.address, body.zipCode, body.city);
-      if (!coords) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
-      const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
-      const { data: zones } = await supabase.from('delivery_zones').select('*').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true });
-      const evaluation = getDeliveryZoneForDistance(dist, (zones ?? []).map((zone: any) => ({
-        id: zone.id,
-        maxDistanceKm: Number(zone.max_distance_km),
-        fee: Number(zone.fee),
-        isActive: zone.is_active ?? true,
-        sortOrder: Number(zone.sort_order ?? 0),
-        createdAt: zone.created_at,
+      const { data: postalCodes } = await supabase.from('delivery_postal_codes').select('*').eq('is_active', true);
+      const override = findPostalCodeOverride(body.zipCode, (postalCodes ?? []).map((row: any) => ({
+        id: row.id,
+        postalCode: row.postal_code,
+        fee: Number(row.fee),
+        isActive: row.is_active ?? true,
+        createdAt: row.created_at,
       })));
-      if (evaluation.isOutOfRange || evaluation.fee === null) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
-      deliveryFee = evaluation.fee;
+
+      if (override) {
+        deliveryFee = override.fee;
+      } else {
+        const coords = await geocodeAddress(body.address, body.zipCode, body.city);
+        if (!coords) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
+        const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
+        const { data: zones } = await supabase.from('delivery_zones').select('*').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true });
+        const evaluation = getDeliveryZoneForDistance(dist, (zones ?? []).map((zone: any) => ({
+          id: zone.id,
+          maxDistanceKm: Number(zone.max_distance_km),
+          fee: Number(zone.fee),
+          isActive: zone.is_active ?? true,
+          sortOrder: Number(zone.sort_order ?? 0),
+          createdAt: zone.created_at,
+        })));
+        if (evaluation.isOutOfRange || evaluation.fee === null) return NextResponse.json({ error: 'Out of range' }, { status: 400 });
+        deliveryFee = evaluation.fee;
+      }
     } catch {
       return NextResponse.json({ error: 'Out of range' }, { status: 400 });
     }
@@ -104,8 +117,10 @@ export async function POST(req: NextRequest) {
     couponUsesLimit = couponRes.usesLimit!;
   }
 
+  const tipAmount = Math.max(0, Number(body.tipAmount ?? 0));
+
   const orderNumber = await generateOrderNumber(supabase);
-  const finalTotal = Math.max(0, (body.subtotal + deliveryFee) - couponDiscount);
+  const finalTotal = Math.max(0, (body.subtotal + deliveryFee + tipAmount) - couponDiscount);
 
   const { data, error } = await supabase
     .from('orders')
@@ -123,6 +138,7 @@ export async function POST(req: NextRequest) {
       items: body.items,
       subtotal: body.subtotal,
       delivery_fee: deliveryFee,
+      tip_amount: tipAmount,
       total: finalTotal,
       coupon_id: couponId,
       coupon_discount: couponDiscount,
@@ -165,6 +181,7 @@ export async function POST(req: NextRequest) {
       items: data.items,
       subtotal: Number(data.subtotal),
       deliveryFee: Number(data.delivery_fee),
+      tipAmount: Number(data.tip_amount ?? 0),
       total: Number(data.total),
       createdAt: data.created_at,
       couponCode: couponId ? body.couponCode : null,

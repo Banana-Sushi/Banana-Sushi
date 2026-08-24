@@ -87,6 +87,7 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   deliveryFee: number;
+  tipAmount?: number;
   total: number;
   stripeSessionId?: string;
   createdAt: string;
@@ -108,5 +109,13 @@ export interface DeliveryZone {
   fee: number;
   isActive: boolean;
   sortOrder: number;
+  createdAt?: string;
+}
+
+export interface DeliveryPostalCode {
+  id: string;
+  postalCode: string;
+  fee: number;
+  isActive: boolean;
   createdAt?: string;
 }

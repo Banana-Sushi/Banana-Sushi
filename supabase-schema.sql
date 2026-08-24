@@ -96,6 +96,18 @@ CREATE TABLE IF NOT EXISTS delivery_zones (
 
 GRANT ALL ON TABLE delivery_zones TO postgres, anon, authenticated, service_role;
 
+-- 8b. Delivery postal codes (explicit allowlist that overrides the distance-based zones above,
+-- for postal codes just outside the max range that the restaurant still wants to deliver to)
+CREATE TABLE IF NOT EXISTS delivery_postal_codes (
+  id                UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
+  postal_code       TEXT          NOT NULL UNIQUE,
+  fee               DECIMAL(10,2) NOT NULL DEFAULT 0,
+  is_active         BOOLEAN       NOT NULL DEFAULT true,
+  created_at        TIMESTAMPTZ   DEFAULT NOW()
+);
+
+GRANT ALL ON TABLE delivery_postal_codes TO postgres, anon, authenticated, service_role;
+
 -- 9. Coupons
 CREATE TABLE IF NOT EXISTS coupons (
   id              UUID          DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -122,6 +134,9 @@ CREATE TABLE IF NOT EXISTS coupon_uses (
 -- Add coupon columns to orders
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_id UUID REFERENCES coupons(id);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_discount DECIMAL(10,2) DEFAULT 0;
+
+-- Tip amount (customer-entered, fixed € or % of subtotal computed client/server-side)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS tip_amount DECIMAL(10,2) DEFAULT 0;
 
 -- RPC to atomically increment coupon uses_count
 CREATE OR REPLACE FUNCTION increment_coupon_uses(coupon_id_param UUID)

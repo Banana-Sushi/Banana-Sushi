@@ -1,4 +1,4 @@
-import type { DeliveryZone } from '@/types';
+import type { DeliveryZone, DeliveryPostalCode } from '@/types';
 
 export interface DeliveryZoneEvaluation {
   fee: number | null;
@@ -39,4 +39,23 @@ export function getDeliveryZoneForDistance(distanceKm: number, zones: DeliveryZo
     isOutOfRange: true,
     maxDistanceKm: maxZone?.maxDistanceKm ?? null,
   };
+}
+
+export function normalizePostalCode(postalCode: string): string {
+  return postalCode.trim().replace(/\s+/g, '').toUpperCase();
+}
+
+export function isValidGermanPostalCode(postalCode: string): boolean {
+  return /^\d{5}$/.test(normalizePostalCode(postalCode));
+}
+
+export function findPostalCodeOverride(
+  postalCode: string,
+  overrides: DeliveryPostalCode[]
+): DeliveryPostalCode | null {
+  const normalized = normalizePostalCode(postalCode);
+  if (!normalized) return null;
+  return overrides.find(
+    override => override.isActive !== false && normalizePostalCode(override.postalCode) === normalized
+  ) ?? null;
 }
