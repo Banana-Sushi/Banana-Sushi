@@ -75,6 +75,16 @@ export default function OrderPage() {
 
   const minScheduledTime = toDatetimeLocalValue(new Date(Date.now() + MIN_SCHEDULED_LEAD_MINUTES * 60 * 1000));
 
+  const validateScheduledTime = (value: string) => {
+    if (!value) return true;
+    if (value < minScheduledTime) {
+      setShowScheduledTimeError(true);
+      return false;
+    }
+    setShowScheduledTimeError(false);
+    return true;
+  };
+
   // Load customer session
   useEffect(() => {
     fetch('/api/customer/me')
@@ -204,8 +214,7 @@ export default function OrderPage() {
     e.preventDefault();
     if (cart.length === 0) return;
 
-    if (form.scheduledTime && form.scheduledTime < minScheduledTime) {
-      setShowScheduledTimeError(true);
+    if (!validateScheduledTime(form.scheduledTime)) {
       return;
     }
 
@@ -400,6 +409,30 @@ export default function OrderPage() {
           </div>
         </div>
       )}
+
+      {showScheduledTimeError && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-8 text-center shadow-2xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">{lang === 'de' ? 'Zeitfenster' : 'Time window'}</p>
+            <h3 className="mt-3 text-2xl font-black uppercase tracking-tight">
+              {lang === 'de' ? 'Wähle einen späteren Zeitpunkt' : 'Choose a later time'}
+            </h3>
+            <p className="mt-3 text-sm font-bold text-gray-500">
+              {lang === 'de'
+                ? 'Das gewünschte Liefer- oder Abholzeitfenster muss mindestens 50 Minuten in der Zukunft liegen.'
+                : 'The preferred delivery or pickup time must be at least 50 minutes from now.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowScheduledTimeError(false)}
+              className="mt-6 w-full rounded-2xl bg-black px-5 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-white hover:bg-yellow-500 hover:text-black transition-all"
+            >
+              {lang === 'de' ? 'Schließen' : 'Close'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <h2 className="text-4xl md:text-5xl font-black uppercase mb-8 tracking-tighter">{t.checkout.title}</h2>
 
       {/* Guest / Login banner */}
@@ -685,7 +718,12 @@ export default function OrderPage() {
             <input
               type="datetime-local"
               value={form.scheduledTime}
-              onChange={e => setForm({ ...form, scheduledTime: e.target.value })}
+              onChange={e => {
+                const nextValue = e.target.value;
+                setForm({ ...form, scheduledTime: nextValue });
+                if (nextValue) validateScheduledTime(nextValue);
+                else setShowScheduledTimeError(false);
+              }}
               min={minScheduledTime}
               placeholder="Select date and time"
               className="hidden md:block w-full p-4 rounded-[32px] border border-neutral-200 bg-white text-black text-sm font-bold shadow-sm outline-none transition focus:border-black"
@@ -700,7 +738,13 @@ export default function OrderPage() {
                 ref={datetimeInputRef}
                 type="datetime-local"
                 value={form.scheduledTime}
-                onChange={e => setForm({ ...form, scheduledTime: e.target.value })}
+                onChange={e => {
+                  const nextValue = e.target.value;
+                  setForm({ ...form, scheduledTime: nextValue });
+                  if (nextValue) validateScheduledTime(nextValue);
+                  else setShowScheduledTimeError(false);
+                }}
+                min={minScheduledTime}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               {form.scheduledTime && (
