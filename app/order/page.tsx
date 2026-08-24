@@ -47,6 +47,7 @@ export default function OrderPage() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [rangeError, setRangeError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showScheduledTimeError, setShowScheduledTimeError] = useState(false);
 
   // Customer session state
   const [customer, setCustomer] = useState<CustomerSession | null>(null);
