@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useAppContext } from '@/context/AppContext';
 import { Icons } from '@/components/Icons';
 import { haversineKm, geocodeAddress, RESTAURANT_LAT, RESTAURANT_LNG } from '@/lib/distance';
-import { getDeliveryZoneForDistance } from '@/lib/delivery-zones';
+import { findPostalCodeOverride, getDeliveryZoneForDistance } from '@/lib/delivery-zones';
 
 interface CustomerAddress {
   id: string;
@@ -84,6 +84,75 @@ export default function OrderPage() {
     setShowScheduledTimeError(false);
     return true;
   };
+
+  useEffect(() => {
+    if (isPickup) {
+      setDeliveryFee(0);
+      setFeeStatus('ready');
+      setRangeError(null);
+      return;
+    }
+
+    const address = form.address.trim();
+    const zip = form.zip.trim();
+    const city = form.city.trim();
+
+    if (!address || !zip || !city) {
+      setDeliveryFee(null);
+      setFeeStatus('idle');
+      setRangeError(null);
+      return;
+    }
+
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      setDeliveryFee(null);
+      setFeeStatus('pending');
+      setRangeError(null);
+
+      try {
+        const postalCodesRes = await fetch('/api/delivery-postal-codes');
+        const postalCodes = await postalCodesRes.json();
+        const postalCodeOverride = findPostalCodeOverride(zip, postalCodes);
+        if (postalCodeOverride) {
+          setDeliveryFee(postalCodeOverride.fee);
+          setFeeStatus('ready');
+          return;
+        }
+
+        const coords = await geocodeAddress(address, zip, city);
+        if (!active) return;
+        if (!coords) {
+          setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
+          setFeeStatus('idle');
+          return;
+        }
+
+        const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
+        const zonesRes = await fetch('/api/delivery-zones');
+        const zones = await zonesRes.json();
+        if (!active) return;
+
+        const evaluation = getDeliveryZoneForDistance(dist, zones);
+        if (evaluation.isOutOfRange) {
+          setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
+          setFeeStatus('idle');
+          return;
+        }
+
+        setDeliveryFee(evaluation.fee ?? 0);
+        setFeeStatus('ready');
+      } catch {
+        if (!active) return;
+        setFeeStatus('idle');
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [form.address, form.zip, form.city, isPickup, lang]);
 
   // Load customer session
   useEffect(() => {
@@ -227,26 +296,36 @@ export default function OrderPage() {
     if (!isPickup) {
       setCheckingAddress(true);
       try {
-        const coords = await geocodeAddress(form.address, form.zip, form.city);
-        if (!coords) {
-          setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
-          setCheckingAddress(false);
-          setLoading(false);
-          setFeeStatus('idle');
-          return;
+        const postalCodesRes = await fetch('/api/delivery-postal-codes');
+        const postalCodes = await postalCodesRes.json();
+        const postalCodeOverride = findPostalCodeOverride(form.zip, postalCodes);
+        let computedFee: number;
+
+        if (postalCodeOverride) {
+          computedFee = postalCodeOverride.fee;
+        } else {
+          const coords = await geocodeAddress(form.address, form.zip, form.city);
+          if (!coords) {
+            setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
+            setCheckingAddress(false);
+            setLoading(false);
+            setFeeStatus('idle');
+            return;
+          }
+          const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
+          const zonesRes = await fetch('/api/delivery-zones');
+          const zones = await zonesRes.json();
+          const evaluation = getDeliveryZoneForDistance(dist, zones);
+          if (evaluation.isOutOfRange) {
+            setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
+            setCheckingAddress(false);
+            setLoading(false);
+            setFeeStatus('idle');
+            return;
+          }
+          computedFee = evaluation.fee ?? 0;
         }
-        const dist = haversineKm(RESTAURANT_LAT, RESTAURANT_LNG, coords.lat, coords.lng);
-        const zonesRes = await fetch('/api/delivery-zones');
-        const zones = await zonesRes.json();
-        const evaluation = getDeliveryZoneForDistance(dist, zones);
-        if (evaluation.isOutOfRange) {
-          setRangeError(lang === 'de' ? 'Out of range' : 'Out of range');
-          setCheckingAddress(false);
-          setLoading(false);
-          setFeeStatus('idle');
-          return;
-        }
-        const computedFee = evaluation.fee ?? 0;
+
         setDeliveryFee(computedFee);
         setFeeStatus('ready');
       } catch {
@@ -563,7 +642,7 @@ export default function OrderPage() {
             </div>
             <div className="flex justify-between items-baseline pt-3 border-t border-gray-200 text-black">
               <span className="font-black uppercase tracking-widest text-[10px]">{t.checkout.total}</span>
-              <span className="text-3xl font-black">{(isPickup || feeStatus === 'ready' || feeStatus === 'pending') ? `${total.toFixed(2)}€` : '...'}</span>
+              <span className="text-3xl font-black">{(isPickup || feeStatus === 'ready') ? `${total.toFixed(2)}€` : '...'}</span>
             </div>
             <p className="text-[9px] text-gray-300 font-bold uppercase pt-1">{t.checkout.taxInfo}</p>
             {!isPickup && feeStatus === 'pending' && (
