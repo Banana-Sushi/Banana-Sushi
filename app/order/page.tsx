@@ -97,7 +97,7 @@ export default function OrderPage() {
     const zip = form.zip.trim();
     const city = form.city.trim();
 
-    if (!address || !zip || !city) {
+    if (!address || !/^\d{5}$/.test(zip) || !city) {
       setDeliveryFee(null);
       setFeeStatus('idle');
       setRangeError(null);
@@ -285,6 +285,10 @@ export default function OrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
+
+    if (!isPickup && !/^\d{5}$/.test(form.zip.trim())) {
+      return;
+    }
 
     if (!validateScheduledTime(form.scheduledTime)) {
       return;
@@ -772,8 +776,11 @@ export default function OrderPage() {
                 <input
                   required
                   placeholder={t.checkout.zip}
+                  inputMode="numeric"
+                  maxLength={5}
+                  pattern="[0-9]{5}"
                   value={form.zip}
-                  onChange={e => setForm({ ...form, zip: e.target.value })}
+                  onChange={e => setForm({ ...form, zip: e.target.value.replace(/\D/g, '').slice(0, 5) })}
                   className="w-1/3 p-5 rounded-2xl border-none outline-none font-bold shadow-inner placeholder:text-gray-300 text-sm"
                 />
                 <input
