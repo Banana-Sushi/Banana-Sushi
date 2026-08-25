@@ -117,10 +117,8 @@ export async function POST(req: NextRequest) {
     couponUsesLimit = couponRes.usesLimit!;
   }
 
-  const tipAmount = Math.max(0, Number(body.tipAmount ?? 0));
-
   const orderNumber = await generateOrderNumber(supabase);
-  const finalTotal = Math.max(0, (body.subtotal + deliveryFee + tipAmount) - couponDiscount);
+  const finalTotal = Math.max(0, (body.subtotal + deliveryFee) - couponDiscount);
 
   const { data, error } = await supabase
     .from('orders')
@@ -138,7 +136,6 @@ export async function POST(req: NextRequest) {
       items: body.items,
       subtotal: body.subtotal,
       delivery_fee: deliveryFee,
-      tip_amount: tipAmount,
       total: finalTotal,
       coupon_id: couponId,
       coupon_discount: couponDiscount,
@@ -181,7 +178,6 @@ export async function POST(req: NextRequest) {
       items: data.items,
       subtotal: Number(data.subtotal),
       deliveryFee: Number(data.delivery_fee),
-      tipAmount: Number(data.tip_amount ?? 0),
       total: Number(data.total),
       createdAt: data.created_at,
       couponCode: couponId ? body.couponCode : null,
