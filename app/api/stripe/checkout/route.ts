@@ -99,10 +99,8 @@ export async function POST(req: NextRequest) {
     couponDiscount = couponRes.discountAmount!;
   }
 
-  const tipAmount = Math.max(0, Number(body.tipAmount ?? 0));
-
   const orderNumber = await generateOrderNumber(supabase);
-  const finalTotal = Math.max(0, (body.subtotal + deliveryFee + tipAmount) - couponDiscount);
+  const finalTotal = Math.max(0, (body.subtotal + deliveryFee) - couponDiscount);
 
   // Build Stripe line items
   const lineItems = body.items.map((item: any) => ({
@@ -121,17 +119,6 @@ export async function POST(req: NextRequest) {
         currency: 'eur',
         product_data: { name: 'Delivery Fee' },
         unit_amount: Math.round(deliveryFee * 100),
-      },
-      quantity: 1,
-    });
-  }
-
-  if (tipAmount > 0) {
-    lineItems.push({
-      price_data: {
-        currency: 'eur',
-        product_data: { name: 'Tip' },
-        unit_amount: Math.round(tipAmount * 100),
       },
       quantity: 1,
     });
@@ -169,7 +156,6 @@ export async function POST(req: NextRequest) {
         items: body.items,
         subtotal: body.subtotal,
         delivery_fee: deliveryFee,
-        tip_amount: tipAmount,
         total: finalTotal,
         coupon_id: couponId,
         coupon_discount: couponDiscount,
